@@ -1,4 +1,4 @@
-import { Injectable, inject, signal, OnDestroy } from '@angular/core';
+import { Injectable, inject, signal, OnDestroy, isDevMode } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { Actions } from '@ngrx/effects';
 import { Action } from '@ngrx/store';
@@ -26,6 +26,15 @@ export class AutomationService implements OnDestroy {
   }
 
   /**
+   * Log message only in development mode.
+   */
+  private log(message: string, ...args: unknown[]): void {
+    if (isDevMode()) {
+      console.log(`[AgentBridge] ${message}`, ...args);
+    }
+  }
+
+  /**
    * Check URL params for automation mode and initialize if enabled.
    */
   private checkAutomationMode(): void {
@@ -35,7 +44,7 @@ export class AutomationService implements OnDestroy {
     this.enabled.set(isAutomation);
 
     if (isAutomation) {
-      console.log('[AgentBridge] Automation mode enabled');
+      this.log('Automation mode enabled');
       this.initBridge();
     }
   }
@@ -53,38 +62,28 @@ export class AutomationService implements OnDestroy {
 
     window.__agentBridge = bridge;
     this.ready.set(true);
-    console.log('[AgentBridge] Bridge initialized and ready');
+    this.log('Bridge initialized and ready');
   }
 
   /**
    * Get a synchronous snapshot of the current store state.
+   * NgRx store is a BehaviorSubject, so first() completes synchronously.
    */
   private getStoreSnapshot(): StoreSnapshot {
-    let snapshot: StoreSnapshot | undefined;
+    let snapshot!: StoreSnapshot;
 
-    // Synchronously get current state using first() operator
     this.store
       .select((state) => state)
       .pipe(first())
       .subscribe((state) => {
+        // Pass through state directly since StoreSnapshot matches AppState
         snapshot = {
-          products: {
-            products: state.products?.products ?? [],
-            selectedProduct: state.products?.selectedProduct ?? null,
-            loading: state.products?.loading ?? false,
-            error: state.products?.error ?? null,
-            searchQuery: state.products?.searchQuery ?? '',
-          },
-          cart: {
-            cart: state.cart?.cart ?? null,
-            customerId: state.cart?.customerId ?? '',
-            loading: state.cart?.loading ?? false,
-            error: state.cart?.error ?? null,
-          },
+          products: state.products,
+          cart: state.cart,
         };
       });
 
-    return snapshot!;
+    return snapshot;
   }
 
   /**
@@ -99,7 +98,7 @@ export class AutomationService implements OnDestroy {
     timeoutMs: number
   ): Promise<BridgeResult> {
     return new Promise((resolve) => {
-      console.log(`[AgentBridge] Dispatching action: ${action.type}`);
+      this.log(`Dispatching action: ${action.type}`);
 
       // Set up listeners before dispatching
       const success$ = this.actions$.pipe(
@@ -134,7 +133,7 @@ export class AutomationService implements OnDestroy {
       race(success$, failure$, timeout$)
         .pipe(takeUntil(this.destroy$))
         .subscribe((result) => {
-          console.log(`[AgentBridge] Result for ${action.type}:`, result);
+          this.log(`Result for ${action.type}:`, result);
           resolve(result as BridgeResult);
         });
 
@@ -147,14 +146,12 @@ export class AutomationService implements OnDestroy {
    * Extract error message from action payload.
    */
   private extractError(action: Action): string {
-    // Check common error payload patterns
     const actionWithPayload = action as Action & {
       error?: string | { message?: string };
       payload?: { error?: string | { message?: string } };
     };
 
-    const error =
-      actionWithPayload.error ?? actionWithPayload.payload?.error;
+    const error = actionWithPayload.error ?? actionWithPayload.payload?.error;
 
     if (typeof error === 'string') {
       return error;
@@ -177,7 +174,7 @@ export class AutomationService implements OnDestroy {
     this.destroy$.complete();
     if (window.__agentBridge) {
       delete window.__agentBridge;
-      console.log('[AgentBridge] Bridge destroyed');
+      this.log('Bridge destroyed');
     }
   }
 }

@@ -4,7 +4,7 @@ import { provideMockActions } from '@ngrx/effects/testing';
 import { Subject } from 'rxjs';
 import { Action } from '@ngrx/store';
 import { AutomationService } from './automation.service';
-import { AppState, StoreSnapshot } from './types';
+import { AppState } from './types';
 
 describe('AutomationService', () => {
   let service: AutomationService;
@@ -96,6 +96,30 @@ describe('AutomationService', () => {
       expect(state?.products.products[0].sku).toBe('100001');
     });
 
+    it('should reflect state changes in snapshot', () => {
+      // Update store state
+      store.setState({
+        ...initialState,
+        cart: {
+          cart: {
+            id: 'cart-123',
+            customerId: 'customer-456',
+            items: [{ sku: '100001', quantity: 2 }],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+          customerId: 'customer-456',
+          loading: false,
+          error: null,
+        },
+      });
+
+      const state = window.__agentBridge?.getState();
+      expect(state?.cart.cart?.id).toBe('cart-123');
+      expect(state?.cart.cart?.items).toHaveLength(1);
+      expect(state?.cart.customerId).toBe('customer-456');
+    });
+
     it('should resolve on success action', async () => {
       const promise = window.__agentBridge!.dispatchAndWait(
         { type: '[Cart] Add Item', sku: '100001', quantity: 1 } as Action,
@@ -134,6 +158,25 @@ describe('AutomationService', () => {
       expect(result.error).toBe('Product not found');
     });
 
+    it('should extract nested error message', async () => {
+      const promise = window.__agentBridge!.dispatchAndWait(
+        { type: '[Cart] Add Item', sku: 'invalid', quantity: 1 } as Action,
+        ['[Cart] Add Item Success'],
+        ['[Cart] Add Item Failure'],
+        1000
+      );
+
+      // Emit failure action with nested error object
+      actions$.next({
+        type: '[Cart] Add Item Failure',
+        error: { message: 'Nested error message' },
+      } as Action);
+
+      const result = await promise;
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('Nested error message');
+    });
+
     it('should timeout if no response', async () => {
       const promise = window.__agentBridge!.dispatchAndWait(
         { type: '[Cart] Add Item', sku: '100001', quantity: 1 } as Action,
@@ -145,6 +188,41 @@ describe('AutomationService', () => {
       const result = await promise;
       expect(result.success).toBe(false);
       expect(result.error).toContain('Timeout');
+    });
+
+    it('should include state snapshot in result', async () => {
+      // Set up state with cart
+      store.setState({
+        ...initialState,
+        cart: {
+          cart: {
+            id: 'cart-123',
+            customerId: 'customer-456',
+            items: [{ sku: '100001', quantity: 1 }],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+          customerId: 'customer-456',
+          loading: false,
+          error: null,
+        },
+      });
+
+      const promise = window.__agentBridge!.dispatchAndWait(
+        { type: '[Cart] Add Item', sku: '100001', quantity: 1 } as Action,
+        ['[Cart] Add Item Success'],
+        ['[Cart] Add Item Failure'],
+        1000
+      );
+
+      actions$.next({
+        type: '[Cart] Add Item Success',
+        cart: { id: 'cart-123', items: [{ sku: '100001', quantity: 2 }] },
+      } as Action);
+
+      const result = await promise;
+      expect(result.state).toBeDefined();
+      expect(result.state?.cart.cart?.id).toBe('cart-123');
     });
   });
 
@@ -175,6 +253,32 @@ describe('AutomationService', () => {
 
     it('should return isEnabled false', () => {
       expect(service.isEnabled()).toBe(false);
+    });
+  });
+
+  describe('when automation=0 is set', () => {
+    beforeEach(() => {
+      actions$ = new Subject<Action>();
+
+      // Mock URL with automation=0
+      Object.defineProperty(window, 'location', {
+        value: { search: '?automation=0' },
+        writable: true,
+      });
+
+      TestBed.configureTestingModule({
+        providers: [
+          AutomationService,
+          provideMockStore({ initialState }),
+          provideMockActions(() => actions$),
+        ],
+      });
+
+      service = TestBed.inject(AutomationService);
+    });
+
+    it('should not expose bridge when automation is not "1"', () => {
+      expect(window.__agentBridge).toBeUndefined();
     });
   });
 });

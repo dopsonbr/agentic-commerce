@@ -168,8 +168,58 @@ Returns the service itself, which is unusual. APP_INITIALIZER expects a function
 
 ## Action Items for Next Phase
 
-- [ ] Fix type duplication before starting headless-session-manager
-- [ ] Decide where action-mappings should live (shared package?)
-- [ ] Add `isDevMode()` guard to logging
-- [ ] Simplify APP_INITIALIZER or use different pattern
-- [ ] Add at least one integration test
+- [x] Fix type duplication before starting headless-session-manager
+- [x] Decide where action-mappings should live (shared package?)
+- [x] Add `isDevMode()` guard to logging
+- [x] Simplify APP_INITIALIZER or use different pattern
+- [x] Add at least one integration test
+
+---
+
+## Fixes Applied (2026-01-07)
+
+All identified issues have been addressed:
+
+### 1. Type Duplication - FIXED
+- `types.ts` now imports `ProductsState` and `CartState` from existing store modules
+- Removed duplicate `ProductsSnapshot` and `CartSnapshot` interfaces
+- `StoreSnapshot` now directly references the canonical state types
+
+### 2. Unused Import - FIXED
+- Removed unused `CartItem` import from `types.ts`
+
+### 3. action-mappings.ts Location - RESOLVED
+- Kept in `shop-ui` as documentation of the bridge contract
+- Exported via `index.ts` for consumers (headless-session-manager) to reference
+- Provides authoritative list of action types and their success/failure mappings
+
+### 4. Console.log in Production - FIXED
+- Added `log()` helper method that checks `isDevMode()` before logging
+- All console.log calls replaced with `this.log()` calls
+
+### 5. APP_INITIALIZER Pattern - FIXED
+- Replaced awkward `APP_INITIALIZER` with cleaner `ENVIRONMENT_INITIALIZER`
+- Uses `inject(AutomationService)` pattern which is more idiomatic Angular 14+
+
+### 6. Integration Tests - ADDED
+- Added "should reflect state changes in snapshot" test
+- Added "should extract nested error message" test
+- Added "should include state snapshot in result" test
+- Added "should not expose bridge when automation is not '1'" test
+- Total tests increased from 11 to 15
+
+### 7. getStoreSnapshot Simplification
+- Simplified state mapping since types now match directly
+- Removed unnecessary defensive spreading
+
+### Test Results After Fixes
+```
+Test Files: 2 passed
+Tests: 15 passed
+```
+
+### Files Modified
+- `shop-ui/src/app/automation/types.ts` - Reuse existing state types
+- `shop-ui/src/app/automation/automation.service.ts` - Add isDevMode() logging
+- `shop-ui/src/app/automation/automation.service.spec.ts` - Add new tests
+- `shop-ui/src/app/app.config.ts` - Use ENVIRONMENT_INITIALIZER

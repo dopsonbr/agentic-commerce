@@ -1,6 +1,6 @@
 import { Action } from '@ngrx/store';
-import { Product } from '../models/product.model';
-import { Cart, CartItem } from '../models/cart.model';
+import { ProductsState } from '../store/products/products.state';
+import { CartState } from '../store/cart/cart.state';
 
 /**
  * Bridge interface exposed as window.__agentBridge when automation mode is enabled.
@@ -49,34 +49,19 @@ export interface BridgeResult {
 
 /**
  * Snapshot of the NgRx store state.
- * Matches the actual state shape defined in ProductsState and CartState.
+ * Reuses existing state interfaces from store modules.
  */
 export interface StoreSnapshot {
-  products: ProductsSnapshot;
-  cart: CartSnapshot;
-}
-
-export interface ProductsSnapshot {
-  products: Product[];
-  selectedProduct: Product | null;
-  loading: boolean;
-  error: string | null;
-  searchQuery: string;
-}
-
-export interface CartSnapshot {
-  cart: Cart | null;
-  customerId: string;
-  loading: boolean;
-  error: string | null;
+  products: ProductsState;
+  cart: CartState;
 }
 
 /**
  * Root state interface for the NgRx store.
  */
 export interface AppState {
-  products: ProductsSnapshot;
-  cart: CartSnapshot;
+  products: ProductsState;
+  cart: CartState;
 }
 
 // Extend Window interface for TypeScript support

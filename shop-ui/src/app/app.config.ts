@@ -1,4 +1,10 @@
-import { ApplicationConfig, isDevMode, provideBrowserGlobalErrorListeners, APP_INITIALIZER } from '@angular/core';
+import {
+  ApplicationConfig,
+  isDevMode,
+  provideBrowserGlobalErrorListeners,
+  ENVIRONMENT_INITIALIZER,
+  inject,
+} from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { provideStore } from '@ngrx/store';
@@ -32,9 +38,8 @@ export const appConfig: ApplicationConfig = {
     }),
     // Initialize automation service on app start (only activates when ?automation=1)
     {
-      provide: APP_INITIALIZER,
-      useFactory: (automation: AutomationService) => () => automation,
-      deps: [AutomationService],
+      provide: ENVIRONMENT_INITIALIZER,
+      useValue: () => inject(AutomationService),
       multi: true,
     },
   ],
