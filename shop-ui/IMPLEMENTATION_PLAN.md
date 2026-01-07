@@ -1,10 +1,42 @@
 # shop-ui Implementation Plan: Automation Bridge
 
+> **Status: ✅ COMPLETE** (2026-01-07)
+
 This plan details adding the automation bridge to enable programmatic control of the Angular SPA via headless browser sessions.
 
 ## Overview
 
 The automation bridge exposes `window.__agentBridge` when the app is loaded with `?automation=1`. This allows the headless-session-manager to dispatch NgRx actions and await their results.
+
+## Implementation Summary
+
+### Files Created
+```
+src/app/automation/
+├── types.ts              # AgentBridge, BridgeResult, StoreSnapshot (reuses store state types)
+├── automation.service.ts # Main service with isDevMode() logging
+├── action-mappings.ts    # Action type mappings for all cart/product operations
+├── automation.service.spec.ts # 13 unit tests
+└── index.ts              # Clean exports
+```
+
+### Key Implementation Decisions
+1. **Type Reuse**: `StoreSnapshot` imports `ProductsState` and `CartState` directly from store modules (no duplication)
+2. **Dev-Only Logging**: Uses `isDevMode()` guard to suppress logs in production
+3. **Modern Initialization**: Uses `ENVIRONMENT_INITIALIZER` instead of `APP_INITIALIZER`
+4. **Comprehensive Testing**: 15 total tests covering success, failure, timeout, and edge cases
+
+### Acceptance Criteria - All Met
+- [x] `?automation=1` enables automation mode
+- [x] `window.__agentBridge` is exposed
+- [x] `isReady()` returns `true` after initialization
+- [x] `getState()` returns current store snapshot
+- [x] `dispatchAndWait()` resolves on success action
+- [x] `dispatchAndWait()` rejects on failure action
+- [x] `dispatchAndWait()` times out if no response
+- [x] Console logs aid debugging (dev mode only)
+
+---
 
 ## Prerequisites
 
@@ -412,14 +444,14 @@ describe('AutomationService', () => {
 
 ## Acceptance Criteria
 
-- [ ] `?automation=1` enables automation mode
-- [ ] `window.__agentBridge` is exposed
-- [ ] `isReady()` returns `true` after initialization
-- [ ] `getState()` returns current store snapshot
-- [ ] `dispatchAndWait()` resolves on success action
-- [ ] `dispatchAndWait()` rejects on failure action
-- [ ] `dispatchAndWait()` times out if no response
-- [ ] Console logs aid debugging
+- [x] `?automation=1` enables automation mode
+- [x] `window.__agentBridge` is exposed
+- [x] `isReady()` returns `true` after initialization
+- [x] `getState()` returns current store snapshot
+- [x] `dispatchAndWait()` resolves on success action
+- [x] `dispatchAndWait()` rejects on failure action
+- [x] `dispatchAndWait()` times out if no response
+- [x] Console logs aid debugging (dev mode only)
 
 ---
 
