@@ -1,4 +1,10 @@
-import { ApplicationConfig, isDevMode, provideBrowserGlobalErrorListeners } from '@angular/core';
+import {
+  ApplicationConfig,
+  isDevMode,
+  provideBrowserGlobalErrorListeners,
+  ENVIRONMENT_INITIALIZER,
+  inject,
+} from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { provideStore } from '@ngrx/store';
@@ -10,6 +16,7 @@ import { productsReducer } from './store/products/products.reducer';
 import { cartReducer } from './store/cart/cart.reducer';
 import { ProductsEffects } from './store/products/products.effects';
 import { CartEffects } from './store/cart/cart.effects';
+import { AutomationService } from './automation/automation.service';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -29,5 +36,11 @@ export const appConfig: ApplicationConfig = {
       traceLimit: 75,
       connectInZone: true,
     }),
+    // Initialize automation service on app start (only activates when ?automation=1)
+    {
+      provide: ENVIRONMENT_INITIALIZER,
+      useValue: () => inject(AutomationService),
+      multi: true,
+    },
   ],
 };

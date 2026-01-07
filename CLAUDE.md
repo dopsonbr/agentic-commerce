@@ -21,12 +21,13 @@ agentic-commerce/
 
 ## Apps
 
-### shop-ui (Angular + NgRx) - EXISTING
+### shop-ui (Angular + NgRx) - COMPLETE
 - **Port:** 4200
 - **Package Manager:** npm
 - **Commands:** `npm start`, `npm run build`, `npm test`
-- **Status:** Working - needs automation bridge added
+- **Status:** ✅ Complete - automation bridge implemented
 - **POC Addition:** `window.__agentBridge` for programmatic control via `?automation=1`
+- **Automation Files:** `src/app/automation/` (types.ts, automation.service.ts, action-mappings.ts)
 
 ### shop-api (Bun) - EXISTING
 - **Port:** 3000
@@ -105,15 +106,42 @@ cd chat-ui && bun run dev
 
 ## Key Concepts
 
-### Automation Bridge (shop-ui)
+### Automation Bridge (shop-ui) - IMPLEMENTED
 When `?automation=1` is set, shop-ui exposes `window.__agentBridge`:
 ```typescript
 interface AgentBridge {
   isReady(): boolean;
-  getState(): StoreState;
-  dispatchAndWait(action, successTypes, failureTypes, timeout): Promise<BridgeResult>;
+  getState(): StoreSnapshot;  // Returns { products: ProductsState, cart: CartState }
+  dispatchAndWait(
+    action: Action,
+    successTypes: string[],
+    failureTypes: string[],
+    timeoutMs?: number  // default: 10000
+  ): Promise<BridgeResult>;
+}
+
+interface BridgeResult {
+  success: boolean;
+  action?: Action;      // The action that resolved the operation
+  error?: string;       // Error message if failed
+  state?: StoreSnapshot; // State after operation
 }
 ```
+
+**Usage from Playwright:**
+```typescript
+await page.goto('http://localhost:4200?automation=1');
+await page.waitForFunction(() => window.__agentBridge?.isReady());
+const result = await page.evaluate(() =>
+  window.__agentBridge!.dispatchAndWait(
+    { type: '[Cart] Add Item', sku: '100003', quantity: 1 },
+    ['[Cart] Add Item Success'],
+    ['[Cart] Add Item Failure']
+  )
+);
+```
+
+**Action mappings:** See `shop-ui/src/app/automation/action-mappings.ts` for all supported actions.
 
 ### MCP Tools
 Tools follow the Model Context Protocol:
@@ -134,9 +162,9 @@ Pattern matching for deterministic tool invocation:
 
 | Phase | Description | Status |
 |-------|-------------|--------|
-| 0 | Local scaffold + repo layout | Complete |
+| 0 | Local scaffold + repo layout | ✅ Complete |
 | 1 | Tool contracts + event model | Pending |
-| 2 | shop-ui automation bridge | Pending |
+| 2 | shop-ui automation bridge | ✅ Complete |
 | 3 | Headless session manager | Pending |
 | 4 | MCP tools server | Pending |
 | 5 | Chat UI | Pending |
