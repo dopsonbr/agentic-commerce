@@ -1,0 +1,92 @@
+[
+  {
+    "sku": "100001",
+    "name": "Fiberglass Claw Hammer 16oz",
+    "price": 24.99,
+    "description": "Professional-grade 16oz claw hammer with fiberglass handle for reduced vibration and increased durability.",
+    "category": "Hand Tools",
+    "inventory": 150,
+    "imageUrl": "/images/hammer-16oz.jpg"
+  },
+  {
+    "sku": "100002",
+    "name": "Carpenter's Pencil 12-Pack",
+    "price": 8.49,
+    "description": "Flat carpenter's pencils designed for marking wood, concrete, and other construction materials. Pack of 12.",
+    "category": "Marking Tools",
+    "inventory": 500,
+    "imageUrl": "/images/carpenter-pencils.jpg"
+  },
+  {
+    "sku": "100003",
+    "name": "2x4 Lumber 8ft Premium Grade",
+    "price": 6.98,
+    "description": "Kiln-dried 2x4 dimensional lumber, 8 feet long. Premium grade for framing and construction projects.",
+    "category": "Lumber",
+    "inventory": 1000,
+    "imageUrl": "/images/2x4-lumber.jpg"
+  },
+  {
+    "sku": "100004",
+    "name": "20V Cordless Power Drill",
+    "price": 89.99,
+    "description": "Powerful 20V lithium-ion cordless drill with 2-speed transmission, LED light, and 1/2-inch chuck. Includes battery and charger.",
+    "category": "Power Tools",
+    "inventory": 75,
+    "imageUrl": "/images/power-drill-20v.jpg"
+  },
+  {
+    "sku": "100005",
+    "name": "Professional Tape Measure 25ft",
+    "price": 19.99,
+    "description": "Heavy-duty 25-foot tape measure with magnetic tip, auto-lock, and belt clip. Blade width 1-inch.",
+    "category": "Measuring Tools",
+    "inventory": 200,
+    "imageUrl": "/images/tape-measure-25ft.jpg"
+  },
+  {
+    "sku": "100006",
+    "name": "Safety Glasses Clear Lens",
+    "price": 12.99,
+    "description": "ANSI Z87.1 rated safety glasses with clear polycarbonate lenses. Anti-scratch and anti-fog coating.",
+    "category": "Safety Equipment",
+    "inventory": 300,
+    "imageUrl": "/images/safety-glasses.jpg"
+  },
+  {
+    "sku": "100007",
+    "name": "Heavy Duty Work Gloves Large",
+    "price": 15.99,
+    "description": "Durable leather palm work gloves with reinforced fingertips. Size Large. Machine washable.",
+    "category": "Safety Equipment",
+    "inventory": 250,
+    "imageUrl": "/images/work-gloves.jpg"
+  },
+  {
+    "sku": "100008",
+    "name": "Torpedo Level 9-inch",
+    "price": 14.49,
+    "description": "Compact 9-inch torpedo level with 3 vials (horizontal, vertical, 45-degree). Magnetic base and V-groove edge.",
+    "category": "Measuring Tools",
+    "inventory": 180,
+    "imageUrl": "/images/torpedo-level.jpg"
+  },
+  {
+    "sku": "100009",
+    "name": "Screwdriver Set 32-Piece",
+    "price": 29.99,
+    "description": "Complete 32-piece screwdriver set including Phillips, flathead, Torx, and hex drivers. Magnetic tips with comfort grip handles.",
+    "category": "Hand Tools",
+    "inventory": 120,
+    "imageUrl": "/images/screwdriver-set.jpg"
+  },
+  {
+    "sku": "100010",
+    "name": "Box of Nails 2-inch (5lb)",
+    "price": 11.99,
+    "description": "5-pound box of 2-inch common nails. Bright finish, ideal for framing and general construction.",
+    "category": "Fasteners",
+    "inventory": 400,
+    "imageUrl": "/images/nails-2in.jpg"
+  }
+]

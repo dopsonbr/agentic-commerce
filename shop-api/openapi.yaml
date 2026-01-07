@@ -1,0 +1,338 @@
+openapi: 3.0.3
+info:
+  title: Shop API
+  description: REST API for products and shopping cart management
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:3000
+    description: Local development server
+
+paths:
+  /api/products:
+    get:
+      summary: List all products
+      description: Returns all products, optionally filtered by keyword search on SKU and name
+      operationId: listProducts
+      parameters:
+        - name: search
+          in: query
+          description: Keyword to search in SKU and name
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of products
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Product'
+
+  /api/products/{sku}:
+    get:
+      summary: Get a product by SKU
+      description: Returns a single product by its SKU
+      operationId: getProduct
+      parameters:
+        - name: sku
+          in: path
+          description: Product SKU
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Product found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '404':
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/cart:
+    post:
+      summary: Create a new cart
+      description: Creates a new shopping cart for a customer
+      operationId: createCart
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - customerId
+              properties:
+                customerId:
+                  type: string
+                  description: Customer identifier
+      responses:
+        '201':
+          description: Cart created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/cart/{cart_id}:
+    get:
+      summary: Get a cart by ID
+      description: Returns a cart by ID. Auto-creates if not found.
+      operationId: getCart
+      parameters:
+        - name: cart_id
+          in: path
+          description: Cart ID
+          required: true
+          schema:
+            type: string
+        - name: customerId
+          in: query
+          description: Customer identifier (required for auto-creation)
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Cart found or created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        '400':
+          description: Missing customerId
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/cart/{cart_id}/items:
+    post:
+      summary: Add item to cart
+      description: Adds an item to the cart. If item already exists, quantity is incremented.
+      operationId: addItemToCart
+      parameters:
+        - name: cart_id
+          in: path
+          description: Cart ID
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - sku
+                - quantity
+              properties:
+                sku:
+                  type: string
+                  description: Product SKU
+                quantity:
+                  type: integer
+                  minimum: 1
+                  description: Quantity to add
+      responses:
+        '200':
+          description: Item added
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Cart not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/cart/{cart_id}/items/{sku}:
+    put:
+      summary: Update item quantity
+      description: Updates the quantity of an item in the cart. If quantity is 0 or less, item is removed.
+      operationId: updateCartItem
+      parameters:
+        - name: cart_id
+          in: path
+          description: Cart ID
+          required: true
+          schema:
+            type: string
+        - name: sku
+          in: path
+          description: Product SKU
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - quantity
+              properties:
+                quantity:
+                  type: integer
+                  description: New quantity
+      responses:
+        '200':
+          description: Item updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Cart or item not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      summary: Remove item from cart
+      description: Removes an item from the cart
+      operationId: removeCartItem
+      parameters:
+        - name: cart_id
+          in: path
+          description: Cart ID
+          required: true
+          schema:
+            type: string
+        - name: sku
+          in: path
+          description: Product SKU
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Item removed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        '404':
+          description: Cart or item not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    Product:
+      type: object
+      required:
+        - sku
+        - name
+        - price
+        - description
+        - category
+        - inventory
+        - imageUrl
+      properties:
+        sku:
+          type: string
+          description: Unique product identifier
+        name:
+          type: string
+          description: Product name
+        price:
+          type: number
+          format: float
+          description: Product price
+        description:
+          type: string
+          description: Product description
+        category:
+          type: string
+          description: Product category
+        inventory:
+          type: integer
+          description: Available inventory count
+        imageUrl:
+          type: string
+          description: URL to product image
+
+    CartItem:
+      type: object
+      required:
+        - sku
+        - quantity
+      properties:
+        sku:
+          type: string
+          description: Product SKU
+        quantity:
+          type: integer
+          minimum: 1
+          description: Quantity in cart
+
+    Cart:
+      type: object
+      required:
+        - id
+        - customerId
+        - items
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          description: Cart ID
+        customerId:
+          type: string
+          description: Customer identifier
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CartItem'
+        createdAt:
+          type: string
+          format: date-time
+          description: Cart creation timestamp
+        updatedAt:
+          type: string
+          format: date-time
+          description: Cart last update timestamp
+
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Error message
