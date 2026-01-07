@@ -13,64 +13,88 @@ agentic-commerce/
 ├── shop-ui/                  # Angular 21 SPA with NgRx (npm)
 ├── shop-api/                 # REST API for products/cart (Bun)
 ├── chat-ui/                  # Chat interface (Bun + React)
-├── mcp-tools/                # Tool server for shopping tools (Bun)
-├── headless-session-manager/ # Headless Chromium session manager (Bun)
-├── IMPLEMENTATION_PLAN.md    # Phased implementation roadmap
-└── README.md                 # Project overview and architecture
+├── mcp-tools/                # MCP tool server (Bun)
+├── headless-session-manager/ # Headless Chromium session manager (Node.js + Playwright)
+├── IMPLEMENTATION_PLAN.md    # Phased implementation roadmap with subplans
+└── README.md                 # Project overview and architecture diagrams
 ```
 
 ## Apps
 
-### shop-ui (Angular + NgRx)
+### shop-ui (Angular + NgRx) - EXISTING
 - **Port:** 4200
 - **Package Manager:** npm
 - **Commands:** `npm start`, `npm run build`, `npm test`
-- **Purpose:** Existing shopping SPA with automation mode (`?automation=1`) and `window.__agentBridge` for programmatic control
+- **Status:** Working - needs automation bridge added
+- **POC Addition:** `window.__agentBridge` for programmatic control via `?automation=1`
 
-### shop-api (Bun)
+### shop-api (Bun) - EXISTING
 - **Port:** 3000
 - **Commands:** `bun run dev`, `bun run start`, `bun test`
-- **Purpose:** REST API for products and cart management (in-memory storage)
-- **Endpoints:** `/api/products`, `/api/cart/:id`
+- **Status:** Working - products and cart API functional
+- **Endpoints:** `/api/products`, `/api/products/:sku`, `/api/cart/:id`
 
-### chat-ui (Bun + React)
-- **Port:** TBD
+### chat-ui (Bun + React) - STUB
+- **Port:** 5173
 - **Commands:** `bun run dev`, `bun run start`
-- **Purpose:** Chat interface rendering messages, tool calls, and context panels
+- **Status:** Scaffold only - needs implementation
+- **Purpose:** Chat interface with scripted agent mode
 
-### mcp-tools (Bun)
-- **Purpose:** Tool server exposing shopping tools (`search_products`, `add_to_cart`, `get_cart_summary`)
-- **Routes:** Direct to shop-api for reads, via headless-session-manager for stateful actions
+### mcp-tools (Bun) - STUB
+- **Port:** 3001
+- **Commands:** `bun run dev`
+- **Status:** Scaffold only - needs implementation
+- **Dependencies:** `@modelcontextprotocol/sdk`, `zod`
 
-### headless-session-manager (Bun)
-- **Purpose:** Manages one headless Chromium session per chat session, executes NgRx actions via automation bridge
+### headless-session-manager (Node.js + Playwright) - STUB
+- **Port:** 3002
+- **Commands:** `npm run dev`
+- **Status:** Scaffold only - needs implementation
+- **Runtime:** Node.js (Playwright incompatible with Bun)
+- **Dependencies:** `playwright`, `express`
 
 ## Local Development
 
 ### Startup Order
-1. `shop-api` - `cd shop-api && bun run dev`
-2. `shop-ui` - `cd shop-ui && npm start`
-3. `headless-session-manager` - `cd headless-session-manager && bun run index.ts`
-4. `mcp-tools` - `cd mcp-tools && bun run index.ts`
-5. `chat-ui` - `cd chat-ui && bun run dev`
+```bash
+# Terminal 1: Start shop-api
+cd shop-api && bun run dev
 
-### Default Ports
-| App | Port |
-|-----|------|
-| shop-ui | 4200 |
-| shop-api | 3000 |
-| chat-ui | TBD |
-| mcp-tools | TBD |
-| headless-session-manager | TBD |
+# Terminal 2: Start shop-ui
+cd shop-ui && npm start
 
-## Technology Stack
+# Terminal 3: Start headless-session-manager (Node.js!)
+cd headless-session-manager && npm run dev
 
-### Bun Apps (shop-api, chat-ui, mcp-tools, headless-session-manager)
+# Terminal 4: Start mcp-tools
+cd mcp-tools && bun run dev
+
+# Terminal 5: Start chat-ui
+cd chat-ui && bun run dev
+```
+
+### Port Summary
+| App | Port | Runtime |
+|-----|------|---------|
+| shop-api | 3000 | Bun |
+| mcp-tools | 3001 | Bun |
+| headless-session-manager | 3002 | Node.js |
+| shop-ui | 4200 | npm/ng |
+| chat-ui | 5173 | Bun |
+
+## Technology Guidelines
+
+### Bun Apps (shop-api, chat-ui, mcp-tools)
 - Use `bun` instead of `node`
 - Use `bun install` instead of `npm install`
 - Use `bun test` for testing
 - Use `Bun.serve()` for HTTP servers (not Express)
 - Bun auto-loads `.env` files
+
+### Node.js App (headless-session-manager)
+- Use `npm` for package management
+- Use Express or native http for server
+- Required because Playwright is incompatible with Bun
 
 ### Angular App (shop-ui)
 - Angular 21 with standalone components
@@ -79,36 +103,56 @@ agentic-commerce/
 - Signals for component state
 - `ChangeDetection.OnPush` required
 
-## Architecture Flow
-
-```
-chat-ui ⇄ mcp-tools
-mcp-tools → shop-api (stateless reads)
-mcp-tools → headless-session-manager (stateful flows)
-headless-session-manager → Chromium → shop-ui?automation=1 → NgRx → shop-api
-```
-
 ## Key Concepts
 
 ### Automation Bridge (shop-ui)
 When `?automation=1` is set, shop-ui exposes `window.__agentBridge`:
-- `dispatchAndWait(action, okTypes, errTypes, correlationId)` - Dispatch NgRx action and await result
+```typescript
+interface AgentBridge {
+  isReady(): boolean;
+  getState(): StoreState;
+  dispatchAndWait(action, successTypes, failureTypes, timeout): Promise<BridgeResult>;
+}
+```
 
-### Tool Cards (chat-ui)
-Tool results are rendered as structured cards, not raw text, for auditability.
+### MCP Tools
+Tools follow the Model Context Protocol:
+- `search_products` - Stateless, routes to shop-api
+- `get_product_details` - Stateless, routes to shop-api
+- `add_to_cart` - Stateful, routes via headless-session-manager
+- `get_cart` - Stateless, routes to shop-api
+- `set_customer_id` - Session state, local to mcp-tools
 
-### Zero-Cost Modes
-- **Scripted agent mode:** Deterministic responses without LLM
-- **Operator mode:** Human-in-the-loop control
+### Scripted Agent Mode (chat-ui)
+Pattern matching for deterministic tool invocation:
+- `customer id is X` → `set_customer_id`
+- `show/find/search X` → `search_products`
+- `add X to cart` → `add_to_cart`
+- `what's in my cart` → `get_cart`
 
-## Implementation Phases
+## Implementation Status
 
-See `IMPLEMENTATION_PLAN.md` for detailed phases:
-- Phase 0: Local scaffold
-- Phase 1: Tool contracts + UI event model
-- Phase 2: shop-ui automation bridge
-- Phase 3: Headless session manager
-- Phase 4: mcp-tools routing
-- Phase 5: chat-ui POC experience
-- Phase 6: Demo hardening
-- Phase 7: (Optional) Smarter brain integration
+| Phase | Description | Status |
+|-------|-------------|--------|
+| 0 | Local scaffold + repo layout | Complete |
+| 1 | Tool contracts + event model | Pending |
+| 2 | shop-ui automation bridge | Pending |
+| 3 | Headless session manager | Pending |
+| 4 | MCP tools server | Pending |
+| 5 | Chat UI | Pending |
+| 6 | Integration + demo hardening | Pending |
+
+## Detailed Implementation Plans
+
+Each app has its own detailed, self-contained implementation plan:
+
+| App | Implementation Plan | Key Notes |
+|-----|---------------------|-----------|
+| shop-ui | `shop-ui/IMPLEMENTATION_PLAN.md` | Add `window.__agentBridge` automation bridge |
+| headless-session-manager | `headless-session-manager/IMPLEMENTATION_PLAN.md` | **Must convert from Bun to Node.js** (Playwright incompatibility) |
+| mcp-tools | `mcp-tools/IMPLEMENTATION_PLAN.md` | MCP tool server with Zod schemas |
+| chat-ui | `chat-ui/IMPLEMENTATION_PLAN.md` | Scripted agent mode, React components |
+
+> ⚠️ **Critical:** Before implementing `headless-session-manager`, you must convert it from Bun to Node.js. See its IMPLEMENTATION_PLAN.md for conversion steps.
+
+See `IMPLEMENTATION_PLAN.md` for the overall roadmap, dependency graph, and architecture diagrams.

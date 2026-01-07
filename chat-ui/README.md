@@ -1,134 +1,176 @@
-# chat-ui/README.md
+# chat-ui
 
-# Agentic Shopping Chat UI (POC)
+Chat interface for testing the agentic shopping concept.
 
-This app is an internal-facing chat experience that demonstrates “agentic shopping” on top of an existing Angular + NGRX shopping SPA and existing REST APIs.
+## Overview
 
-The Chat UI does **not** need a paid AI API for the POC. It supports:
-- **Scripted agent mode** (deterministic flows)
-- **Operator mode** (human-in-the-loop demo control)
-- Later: plug-in an LLM (local or paid) without changing the UI contract
+This is the frontend chat application that allows users to interact with the shopping system using natural language. It features a **scripted agent mode** that uses pattern matching to invoke tools without requiring an LLM.
 
----
+## Stack
 
-## Goals (POC)
-- Provide a chat interface that can:
-  - search products
-  - propose options
-  - add items to cart (via tools)
-  - show cart state updates as structured “tool results”
-- Make tool usage **auditable** (tool calls + tool results displayed as cards)
-- Keep it safe: require user approval before impactful actions (e.g., add-to-cart, checkout)
+- **Runtime:** Bun
+- **UI Framework:** React 19
+- **Styling:** Tailwind CSS
+- **Components:** Radix UI primitives
+- **Port:** 5173
 
-## Non-goals (POC)
-- Rebuild the full shopping SPA UX
-- Replace NGRX orchestration with server-side workflows
-- Perfect AI reasoning quality
+## Features
 
----
+- Conversation feed with user/assistant messages
+- Tool call + result rendering as cards
+- Cart summary context panel
+- Session info display
+- Scripted agent mode (deterministic, no LLM required)
+- Approval flow for impactful actions
 
-## UX Overview (High-level)
-Layout: **Chat + Context Panel**
+## Development
 
-1) **Conversation Feed**
-- User + assistant messages
-- “Tool event cards” for tool calls/results (no raw JSON by default)
+```bash
+# Install dependencies
+bun install
 
-2) **Composer**
-- send message
-- optional quick actions (e.g., “Show cart”, “Add top pick”)
+# Start development server
+bun run dev
 
-3) **Right Rail Context Panel**
-- Cart summary (items, qty, subtotal, warnings)
-- Shortlist (candidate products)
-- Activity (recent tool calls/results)
-
-4) **Approval Moments**
-- “Proposed action → Approve / Cancel”
-- For POC, default approvals for:
-  - add_to_cart
-  - remove_from_cart
-  - checkout (if implemented)
-
----
-
-## How it Works
-The Chat UI talks to an **MCP Tool Server** over HTTP/WebSocket (implementation choice), using a simple event protocol:
-
-### Event types
-- `user_message`
-- `assistant_message`
-- `tool_call` (name + args)
-- `tool_result` (structured JSON + status)
-- `system_status` (headless session ready, auth expired, etc.)
-
-The “brain” that decides what tool to call can be:
-- Scripted rules engine (POC default)
-- Operator mode (a human chooses tool calls)
-- Later: local LLM / paid LLM
-
----
-
-## Integration Points
-- **MCP Tool Server** (required)
-  - accepts user messages / tool invocations
-  - returns tool results and assistant responses
-
-- **Existing APIs** (indirect)
-  - read-only calls may be routed directly by MCP
-  - cart/workflow actions may be routed to headless SPA session by MCP
-
----
+# Build for production
+bun run build
+```
 
 ## Configuration
-Example environment variables (names are suggestions):
-- `CHAT_MCP_BASE_URL` — base URL for MCP Tool Server
-- `CHAT_MODE` — `scripted | operator` (default: scripted)
-- `CHAT_SESSION_TTL_MINUTES` — used for client UX status (server remains source of truth)
-- `CHAT_ENABLE_APPROVALS` — `true|false` (default true)
 
----
+Environment variables:
+```bash
+PORT=5173
+MCP_TOOLS_URL=http://localhost:3001
+CHAT_MODE=scripted  # scripted | operator
+```
 
-## Local Development (suggested)
-1) Run MCP Tool Server
-2) Run Chat UI
-3) Login via internal SSO (or dev bypass if available)
+## Architecture
 
-The UI should display:
-- connection status to MCP
-- headless session readiness (if exposed by MCP)
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                           chat-ui                                   │
+│                                                                     │
+│  ┌─────────────────────────────────┬───────────────────────────┐   │
+│  │      Conversation Panel         │      Context Panel        │   │
+│  │                                 │                           │   │
+│  │  ┌───────────────────────────┐ │  ┌─────────────────────┐  │   │
+│  │  │ User message              │ │  │   Cart Summary      │  │   │
+│  │  └───────────────────────────┘ │  │   Items: N          │  │   │
+│  │  ┌───────────────────────────┐ │  │   Total: $X.XX      │  │   │
+│  │  │ [Tool Call Card]          │ │  └─────────────────────┘  │   │
+│  │  │  Tool result rendered     │ │                           │   │
+│  │  └───────────────────────────┘ │  ┌─────────────────────┐  │   │
+│  │  ┌───────────────────────────┐ │  │   Session Info      │  │   │
+│  │  │ [Message Input]           │ │  │   Customer: X       │  │   │
+│  │  └───────────────────────────┘ │  └─────────────────────┘  │   │
+│  └─────────────────────────────────┴───────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────┘
+```
 
----
+## Scripted Agent Mode
 
-## Testing (POC)
-- Unit test:
-  - message rendering
-  - tool card rendering
-  - approval flows
-- E2E (optional):
-  - “search → shortlist → approve add_to_cart → cart updates”
+The chat uses pattern matching to determine which tool to invoke:
 
----
+| Pattern | Tool | Example |
+|---------|------|---------|
+| `customer id is X` | `set_customer_id` | "my customer id is 123456" |
+| `show/find/search X` | `search_products` | "show me hammers" |
+| `add X to cart` | `add_to_cart` | "add the hammer to my cart" |
+| `what's in my cart` | `get_cart` | "what's in my cart" |
 
-## “Good Demo” Script
-- User: “Find best value paper towels under $30”
-- Agent: searches products, shows 3 options
-- User: “Add top pick x2”
-- UI: shows an approval card
-- User approves
-- Tool runs, cart panel updates
+## Demo Script
 
----
+```
+User: "my customer id is 123456"
+→ Calls set_customer_id, updates session info
 
-## Security / Safety Notes (internal)
+User: "show me info about a hammer"
+→ Calls search_products, displays product card
+
+User: "add the hammer to my cart"
+→ Calls add_to_cart, shows confirmation, updates cart panel
+
+User: "what's in my cart"
+→ Calls get_cart, displays cart contents
+```
+
+## File Structure (Target)
+
+```
+chat-ui/
+├── src/
+│   ├── index.ts              # Server entry
+│   ├── index.html            # HTML entry
+│   ├── frontend.tsx          # React entry
+│   ├── App.tsx               # Main component
+│   ├── components/
+│   │   ├── ChatContainer.tsx
+│   │   ├── MessageList.tsx
+│   │   ├── MessageInput.tsx
+│   │   ├── ToolCallCard.tsx
+│   │   ├── ToolResultCard.tsx
+│   │   ├── ProductCard.tsx
+│   │   ├── CartSummary.tsx
+│   │   └── SessionInfo.tsx
+│   ├── hooks/
+│   │   ├── useChat.ts
+│   │   ├── useScriptedAgent.ts
+│   │   └── useToolExecution.ts
+│   ├── services/
+│   │   ├── mcp-client.ts
+│   │   └── session.ts
+│   └── types/
+│       └── events.ts
+├── styles/
+│   └── globals.css
+├── package.json
+└── tsconfig.json
+```
+
+## Component Responsibilities
+
+| Component | Purpose |
+|-----------|---------|
+| `ChatContainer` | Main layout, orchestrates panels |
+| `MessageList` | Renders conversation history |
+| `MessageInput` | User text input |
+| `ToolCallCard` | Shows tool invocation |
+| `ToolResultCard` | Renders tool results by type |
+| `ProductCard` | Product display for search results |
+| `CartSummary` | Side panel cart overview |
+| `SessionInfo` | Shows session/customer context |
+
+## Hooks
+
+| Hook | Purpose |
+|------|---------|
+| `useChat` | Manages conversation state |
+| `useScriptedAgent` | Pattern matching for tool selection |
+| `useToolExecution` | Calls mcp-tools API |
+
+## Tool Result Rendering
+
+Each tool has a specialized renderer:
+
+- `search_products` → `ProductListCard`
+- `add_to_cart` → `CartConfirmationCard`
+- `get_cart` → `CartContentsCard`
+- Default → `JsonCard`
+
+## Event Types
+
+```typescript
+type ChatEvent =
+  | { type: "user_message"; content: string }
+  | { type: "assistant_message"; content: string }
+  | { type: "tool_call"; toolName: string; args: unknown; callId: string }
+  | { type: "tool_result"; callId: string; result: unknown }
+  | { type: "error"; message: string };
+```
+
+## Security Notes
+
 - Never expose sensitive tokens in tool cards
 - Approval gate for transactional tools
-- Display “tool provenance” (what ran, when, result) for trust
-
----
-
-## Future Enhancements
-- Streaming assistant responses
-- Inline product compare view (within tool cards)
-- “Undo last action” (requires tool support)
-- Pluggable LLM adapter (local first)
+- Display tool provenance (what ran, when, result) for trust
