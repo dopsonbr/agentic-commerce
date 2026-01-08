@@ -1,7 +1,10 @@
 import { serve } from "bun";
 import index from "./index.html";
 
+const PORT = process.env['PORT'] ? parseInt(process.env['PORT']) : 5173;
+
 const server = serve({
+  port: PORT,
   routes: {
     // Serve index.html for all unmatched routes.
     "/*": index,
