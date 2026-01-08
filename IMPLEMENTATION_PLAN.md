@@ -77,7 +77,7 @@ Tool Contracts ──► shop-ui bridge ──► headless-session-manager ─�
      │                   │                      │                      │            │
      ▼                   ▼                      ▼                      ▼            ▼
   Phase 1            Phase 2               Phase 3                Phase 4      Phase 5
-  (merged)           ✅ DONE              ✅ DONE                ✅ DONE
+  (merged)           ✅ DONE              ✅ DONE                ✅ DONE      ✅ DONE
 ```
 
 ---
@@ -542,7 +542,9 @@ Bun.serve({
 
 ---
 
-## Phase 5 — Chat UI
+## Phase 5 — Chat UI ✅ COMPLETE
+
+> **Completed:** 2026-01-08 | **See:** [`chat-ui/IMPLEMENTATION_PLAN.md`](./chat-ui/IMPLEMENTATION_PLAN.md)
 
 ### Goal
 Build the chat interface with scripted agent mode and tool result rendering.
