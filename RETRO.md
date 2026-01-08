@@ -573,7 +573,7 @@ Add to Development Patterns section:
 ## Action Items for Next Phase
 
 - [ ] Phase 5: chat-ui implementation
-- [ ] Add unit tests for mcp-tools handlers
+- [x] Add unit tests for mcp-tools handlers (41 tests added)
 - [ ] Integration test: full flow from chat-ui → mcp-tools → headless → shop-ui → shop-api
-- [ ] Update CLAUDE.md with state propagation patterns
+- [x] Update CLAUDE.md with state propagation patterns
 - [ ] Verify add_to_cart works in environment with Playwright browsers

@@ -271,3 +271,35 @@ if (executeResponse.status === 404) {
   // Retry the original operation
 }
 ```
+
+### Implementation Plan Validation
+- **Before implementing**, validate plan assumptions against actual API contracts:
+  - Check required vs optional parameters
+  - Verify response shapes match expectations
+  - Test error codes and edge cases
+- Example: mcp-tools plan assumed `customerId` was optional for `get_cart`, but shop-api requires it
+- Read dependency source code when plan references external APIs
+
+### Data Flow Tracing
+- For stateful operations, trace the complete data flow before implementing:
+  ```
+  set_customer_id flow:
+    1. mcp-tools receives call
+    2. Update local sessionStore ✓
+    3. If headless session exists:
+       → Dispatch [Cart] Set Customer ID to shop-ui NgRx store ✓
+    4. On next add_to_cart:
+       → cart.effects reads selectCustomerId
+       → Creates cart with correct customer (not 'guest')
+  ```
+- Document which systems need updates for each stateful operation
+- Consider downstream effects (NgRx selectors, effects, API calls)
+
+### Testing Patterns
+- Write unit tests with fetch mocking for HTTP handlers
+- Test error paths and edge cases, not just happy paths
+- For session-based handlers, test:
+  - Session creation
+  - Session recovery (404 → recreate)
+  - State propagation on session create/recover
+- Run `bun test` in mcp-tools before committing
