@@ -5,16 +5,23 @@ export const tracingInterceptor: HttpInterceptorFn = (req, next) => {
   const faro = getFaro();
 
   if (faro) {
-    const traceContext = faro.api.getTraceContext?.();
+    const traceContext = faro.api.getTraceContext?.() as Record<string, string> | undefined;
     if (traceContext) {
-      // Build W3C traceparent header from trace context
-      // Format: version-trace_id-span_id-flags (00 = not sampled, 01 = sampled)
-      const traceparent = `00-${traceContext.trace_id}-${traceContext.span_id}-01`;
-      req = req.clone({
-        setHeaders: {
-          'traceparent': traceparent,
-        },
-      });
+      // Faro returns snake_case (trace_id, span_id) per its type definitions
+      // Handle both conventions for robustness
+      const traceId = traceContext['trace_id'] || traceContext['traceId'];
+      const spanId = traceContext['span_id'] || traceContext['spanId'];
+
+      if (traceId && spanId) {
+        // Build W3C traceparent header: version-traceid-spanid-flags
+        // version: 00 (current), flags: 01 (sampled)
+        const traceparent = `00-${traceId}-${spanId}-01`;
+        req = req.clone({
+          setHeaders: {
+            'traceparent': traceparent,
+          },
+        });
+      }
     }
 
     // Log the HTTP request as an event
