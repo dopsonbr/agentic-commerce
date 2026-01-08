@@ -21,7 +21,7 @@ services:
     networks:
       - agentic-net
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/health"]
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:3000/health"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -41,7 +41,7 @@ services:
     networks:
       - agentic-net
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:80"]
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:80"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -69,7 +69,7 @@ services:
     networks:
       - agentic-net
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3001/health"]
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:3001/health"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -117,7 +117,7 @@ services:
     networks:
       - agentic-net
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:5173"]
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:5173"]
       interval: 10s
       timeout: 5s
       retries: 3

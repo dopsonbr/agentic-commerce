@@ -3,8 +3,8 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-# Install pnpm
-RUN corepack enable && corepack prepare pnpm@latest --activate
+# Install pnpm via npm (corepack has signature issues with @latest)
+RUN npm install -g pnpm
 
 # Copy package files
 COPY package.json pnpm-lock.yaml ./
