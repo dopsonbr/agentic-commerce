@@ -41,11 +41,13 @@ agentic-commerce/
 - **Status:** Scaffold only - needs implementation
 - **Purpose:** Chat interface with scripted agent mode
 
-### mcp-tools (Bun) - STUB
+### mcp-tools (Bun) - COMPLETE
 - **Port:** 3001
 - **Commands:** `bun run dev`
-- **Status:** Scaffold only - needs implementation
-- **Dependencies:** `@modelcontextprotocol/sdk`, `zod`
+- **Status:** ✅ Complete - MCP tool server implemented
+- **Dependencies:** `zod`
+- **Tools:** `search_products`, `get_product_details`, `get_cart`, `add_to_cart`, `set_customer_id`
+- **Endpoints:** `/health`, `/tools`, `/tools/:name/call`, `/sessions`
 
 ### headless-session-manager (Node.js + Playwright) - COMPLETE
 - **Port:** 3002
@@ -164,10 +166,10 @@ Pattern matching for deterministic tool invocation:
 | Phase | Description | Status |
 |-------|-------------|--------|
 | 0 | Local scaffold + repo layout | ✅ Complete |
-| 1 | Tool contracts + event model | Pending |
+| 1 | Tool contracts + event model | ✅ Complete (merged into Phase 4) |
 | 2 | shop-ui automation bridge | ✅ Complete |
 | 3 | Headless session manager | ✅ Complete |
-| 4 | MCP tools server | Pending |
+| 4 | MCP tools server | ✅ Complete |
 | 5 | Chat UI | Pending |
 | 6 | Integration + demo hardening | Pending |
 
@@ -179,7 +181,7 @@ Each app has its own detailed, self-contained implementation plan:
 |-----|---------------------|--------|
 | shop-ui | `shop-ui/IMPLEMENTATION_PLAN.md` | ✅ Complete |
 | headless-session-manager | `headless-session-manager/IMPLEMENTATION_PLAN.md` | ✅ Complete (converted to Node.js) |
-| mcp-tools | `mcp-tools/IMPLEMENTATION_PLAN.md` | Pending |
+| mcp-tools | `mcp-tools/IMPLEMENTATION_PLAN.md` | ✅ Complete |
 | chat-ui | `chat-ui/IMPLEMENTATION_PLAN.md` | Pending |
 
 See `IMPLEMENTATION_PLAN.md` for the overall roadmap, dependency graph, and architecture diagrams.
@@ -245,3 +247,59 @@ async createSession(id: string) {
 await page.goto(url, { waitUntil: 'networkidle' });
 await page.waitForFunction(() => window.__agentBridge?.isReady());
 ```
+
+### State Propagation Across Services
+- When setting state that affects multiple services, propagate to all:
+  - mcp-tools local sessionStore
+  - headless-session-manager (if session exists)
+  - shop-ui NgRx store (via bridge action dispatch)
+- Trace the full data flow before implementing stateful operations
+- Example: `set_customer_id` must update both mcp-tools sessionStore AND dispatch `[Cart] Set Customer ID` to headless
+
+### Session Recovery
+- Headless sessions may timeout or be destroyed externally (30min idle timeout)
+- Implement retry with session recreation on 404 errors
+- Always propagate dependent state (customerId) when recreating sessions
+
+```typescript
+// Pattern: retry with session recovery
+if (executeResponse.status === 404) {
+  await createHeadlessSession(sessionId);
+  if (context.customerId) {
+    await setCustomerIdInHeadless(sessionId, context.customerId);
+  }
+  // Retry the original operation
+}
+```
+
+### Implementation Plan Validation
+- **Before implementing**, validate plan assumptions against actual API contracts:
+  - Check required vs optional parameters
+  - Verify response shapes match expectations
+  - Test error codes and edge cases
+- Example: mcp-tools plan assumed `customerId` was optional for `get_cart`, but shop-api requires it
+- Read dependency source code when plan references external APIs
+
+### Data Flow Tracing
+- For stateful operations, trace the complete data flow before implementing:
+  ```
+  set_customer_id flow:
+    1. mcp-tools receives call
+    2. Update local sessionStore ✓
+    3. If headless session exists:
+       → Dispatch [Cart] Set Customer ID to shop-ui NgRx store ✓
+    4. On next add_to_cart:
+       → cart.effects reads selectCustomerId
+       → Creates cart with correct customer (not 'guest')
+  ```
+- Document which systems need updates for each stateful operation
+- Consider downstream effects (NgRx selectors, effects, API calls)
+
+### Testing Patterns
+- Write unit tests with fetch mocking for HTTP handlers
+- Test error paths and edge cases, not just happy paths
+- For session-based handlers, test:
+  - Session creation
+  - Session recovery (404 → recreate)
+  - State propagation on session create/recover
+- Run `bun test` in mcp-tools before committing

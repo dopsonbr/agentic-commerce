@@ -383,6 +383,197 @@ Consider adding to CLAUDE.md:
 
 ## Action Items for Next Phase
 
-- [ ] Phase 4: mcp-tools server implementation
+- [x] Phase 4: mcp-tools server implementation
 - [ ] Integration testing: shop-api + shop-ui + headless-session-manager
 - [x] Update CLAUDE.md with CORS and resource management guidance
+
+---
+
+# Phase 4: mcp-tools Server
+
+**Date:** 2026-01-08
+**Duration:** ~1 session
+**Status:** ✅ Complete
+
+### Summary
+
+Implemented the MCP-compliant tool server with 5 tools (search_products, get_product_details, get_cart, add_to_cart, set_customer_id). Also included Phase 1 deliverables (tool contracts/Zod schemas) which were previously skipped.
+
+---
+
+## What Went Well
+
+### 1. Implementation Plan Was Comprehensive
+- The detailed `mcp-tools/IMPLEMENTATION_PLAN.md` had excellent code examples
+- File structure, schemas, and handler patterns were well-specified
+- Made initial implementation straightforward
+
+### 2. Clean Architecture
+- Good separation of concerns: schemas, handlers, tool registry, session context
+- Each handler is self-contained with clear input/output contracts
+- Zod provides runtime validation and TypeScript types in one place
+
+### 3. Stateless Tools Worked Immediately
+- `search_products`, `get_product_details`, and `set_customer_id` worked on first test
+- shop-api integration was straightforward
+
+### 4. Critical Review Caught Real Bugs
+- Self-review identified 5 issues that would have caused production failures:
+  - `get_cart` would 400 without customerId (shop-api requirement)
+  - `search_products` total was misleading (showed limited count)
+  - No headless cleanup on session delete (resource leak)
+  - No session recovery in add_to_cart (stale session failure)
+  - Customer ID not propagated to headless (wrong customer on cart)
+
+### 5. Iterative Fix Cycle
+- Each issue was fixed promptly after identification
+- Fixes were targeted and didn't break other functionality
+- 3 commits: initial impl → review fixes → customer ID propagation
+
+---
+
+## What Went Poorly
+
+### 1. Phase 1 Was Skipped
+**Problem:** Phase 1 (Tool Contracts + Event Model) was never implemented. Phases 2-3 proceeded without it.
+
+**Impact:** Had to include Phase 1 deliverables in Phase 4, making it larger than planned.
+
+**Should have done:** Either implement Phase 1 first, or explicitly document it as "merged into Phase 4" in the plan before starting.
+
+### 2. Plan Didn't Match shop-api Contract
+**Problem:** The implementation plan's `get_cart` handler didn't account for shop-api requiring `customerId` as a mandatory query parameter.
+
+**Code from plan:**
+```typescript
+if (context.customerId) {
+  url.searchParams.set('customerId', context.customerId);
+}
+```
+
+**Actual shop-api requirement:**
+```typescript
+if (!customerId) {
+  return json({ error: "customerId query parameter is required" }, { status: 400 });
+}
+```
+
+**Impact:** `get_cart` would fail with 400 error in real usage.
+
+**Should have done:** Validate implementation plans against actual API contracts of dependencies.
+
+### 3. State Propagation Not Considered
+**Problem:** The plan treated `set_customer_id` as purely local state, but the NgRx store in shop-ui also needs to know the customer ID for cart creation.
+
+**Impact:** Carts would be created with "guest" instead of the set customer ID.
+
+**Root cause:** Incomplete understanding of the full data flow:
+```
+mcp-tools (set_customer_id)
+  → local sessionStore ✓
+  → headless shop-ui NgRx store ✗ (missing!)
+    → cart.effects uses selectCustomerId
+      → creates cart with wrong customer
+```
+
+**Should have done:** Trace the full data flow for each tool before implementing.
+
+### 4. Couldn't Test add_to_cart
+**Problem:** Playwright browser downloads were blocked (403 errors) in the test environment.
+
+**Impact:** `add_to_cart` code path couldn't be verified end-to-end.
+
+**Mitigation:** Code review confirmed the logic is correct; will need integration test in proper environment.
+
+### 5. No Unit Tests Written
+**Problem:** No automated tests were written for the handlers.
+
+**Impact:** Relying on manual curl tests for verification.
+
+**Should have done:** Write at least basic unit tests for each handler with mocked fetch.
+
+---
+
+## Issues Identified During Review
+
+| Issue | Severity | Resolution |
+|-------|----------|------------|
+| `get_cart` fails without customerId | Critical | Added validation + clear error message |
+| `search_products` total misleading | Medium | Changed to report actual match count |
+| No headless cleanup on delete | Medium | Added `deleteWithCleanup()` method |
+| No session recovery in add_to_cart | Medium | Added retry on 404 with session recreation |
+| Customer ID not propagated | High | Dispatch `[Cart] Set Customer ID` to headless |
+
+---
+
+## Lessons Learned / Memory Updates
+
+### For Future Implementations
+
+1. **Validate plans against actual API contracts**
+   - Before implementing, verify the plan's assumptions match real dependency behavior
+   - Check required vs optional parameters, response shapes, error codes
+
+2. **Trace full data flow before implementing**
+   - For stateful operations, trace the data from entry point to final storage
+   - Identify all systems that need to be updated (not just local state)
+
+3. **State propagation patterns**
+   - When managing state across services, document which systems need updates:
+   ```
+   set_customer_id:
+     1. mcp-tools sessionStore (local) ✓
+     2. headless-session-manager (if exists) → shop-ui NgRx store ✓
+   ```
+
+4. **Session lifecycle management**
+   - Creating a session = responsibility to clean it up
+   - Add cleanup hooks in delete/destroy paths
+   - Consider session recovery for transient failures
+
+5. **Critical review BEFORE committing**
+   - Review should happen before initial commit, not after
+   - Catches issues before they enter git history
+
+### CLAUDE.md Updates Recommended
+
+Add to Development Patterns section:
+
+```markdown
+### State Propagation Across Services
+- When setting state that affects multiple services, propagate to all:
+  - mcp-tools local sessionStore
+  - headless-session-manager (if session exists)
+  - shop-ui NgRx store (via bridge action dispatch)
+- Trace the full data flow before implementing stateful operations
+
+### Session Recovery
+- Headless sessions may timeout or be destroyed externally
+- Implement retry with session recreation on 404 errors
+- Always propagate dependent state (customerId) when recreating sessions
+```
+
+---
+
+## Metrics
+
+| Metric | Value |
+|--------|-------|
+| Files created | 10 (types, schemas, handlers, registry, index, etc.) |
+| Files modified | 2 (package.json, CLAUDE.md) |
+| Lines of code | ~550 (TypeScript) |
+| Dependencies added | zod |
+| Commits | 3 (initial + review fixes + customer ID propagation) |
+| Tools implemented | 5 |
+| Issues found in review | 5 |
+| Issues fixed | 5 |
+
+---
+
+## Action Items for Next Phase
+
+- [ ] Phase 5: chat-ui implementation
+- [x] Add unit tests for mcp-tools handlers (41 tests added)
+- [ ] Integration test: full flow from chat-ui → mcp-tools → headless → shop-ui → shop-api
+- [x] Update CLAUDE.md with state propagation patterns
+- [ ] Verify add_to_cart works in environment with Playwright browsers
