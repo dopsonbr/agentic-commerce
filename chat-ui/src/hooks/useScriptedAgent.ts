@@ -28,17 +28,16 @@ const patterns: AgentPattern[] = [
       return `Got it! I've set your customer ID to ${r.customerId}.`;
     },
   },
-  // Search products
+  // Get cart (MUST come before search_products to avoid "show cart" matching search)
   {
-    match: /(?:show|find|search|look\s+for|get)\s+(?:me\s+)?(?:info\s+(?:about|on)\s+)?(?:a\s+)?(.+?)(?:\s+please)?$/i,
-    tool: 'search_products',
-    extractArgs: (match) => ({ query: match[1]?.trim() ?? '', limit: 5 }),
+    match: /(?:what'?s?\s+in\s+my\s+cart|show\s+(?:my\s+)?cart|cart\s+contents|view\s+cart)/i,
+    tool: 'get_cart',
+    extractArgs: () => ({}),
     response: (result: unknown) => {
-      const r = result as { products: unknown[]; total: number };
-      const count = r.products?.length ?? 0;
-      return count > 0
-        ? `I found ${count} product${count > 1 ? 's' : ''} matching your search.`
-        : `I couldn't find any products matching that search.`;
+      const r = result as { items: unknown[]; total: number };
+      const items = r.items?.length ?? 0;
+      if (items === 0) return `Your cart is empty.`;
+      return `Your cart has ${items} item${items > 1 ? 's' : ''} totaling $${r.total?.toFixed(2) || '0.00'}.`;
     },
   },
   // Add to cart
@@ -62,16 +61,30 @@ const patterns: AgentPattern[] = [
         : `Sorry, I couldn't add that to your cart. Try searching for a product first.`;
     },
   },
-  // Get cart
+  // Search products (handles "show me X", "find X", "search for X", "look for X", "get X")
   {
-    match: /(?:what'?s?\s+in\s+my\s+cart|show\s+(?:my\s+)?cart|cart\s+contents|view\s+cart)/i,
-    tool: 'get_cart',
-    extractArgs: () => ({}),
+    match: /(?:show|find|get)\s+(?:me\s+)?(?:info\s+(?:about|on)\s+)?(?:a\s+)?(.+?)(?:\s+please)?$/i,
+    tool: 'search_products',
+    extractArgs: (match) => ({ query: match[1]?.trim() ?? '', limit: 5 }),
     response: (result: unknown) => {
-      const r = result as { items: unknown[]; total: number };
-      const items = r.items?.length ?? 0;
-      if (items === 0) return `Your cart is empty.`;
-      return `Your cart has ${items} item${items > 1 ? 's' : ''} totaling $${r.total?.toFixed(2) || '0.00'}.`;
+      const r = result as { products: unknown[]; total: number };
+      const count = r.products?.length ?? 0;
+      return count > 0
+        ? `I found ${count} product${count > 1 ? 's' : ''} matching your search.`
+        : `I couldn't find any products matching that search.`;
+    },
+  },
+  // Search products with "for" (handles "search for X", "look for X")
+  {
+    match: /(?:search|look)\s+for\s+(?:a\s+)?(.+?)(?:\s+please)?$/i,
+    tool: 'search_products',
+    extractArgs: (match) => ({ query: match[1]?.trim() ?? '', limit: 5 }),
+    response: (result: unknown) => {
+      const r = result as { products: unknown[]; total: number };
+      const count = r.products?.length ?? 0;
+      return count > 0
+        ? `I found ${count} product${count > 1 ? 's' : ''} matching your search.`
+        : `I couldn't find any products matching that search.`;
     },
   },
 ];
