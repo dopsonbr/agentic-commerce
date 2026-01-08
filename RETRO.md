@@ -385,4 +385,4 @@ Consider adding to CLAUDE.md:
 
 - [ ] Phase 4: mcp-tools server implementation
 - [ ] Integration testing: shop-api + shop-ui + headless-session-manager
-- [ ] Update CLAUDE.md with CORS and resource management guidance
+- [x] Update CLAUDE.md with CORS and resource management guidance
