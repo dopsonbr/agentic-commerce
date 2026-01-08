@@ -14,6 +14,38 @@ otelcol.receiver.otlp "default" {
   }
 }
 
+// ============ Faro Receiver (Browser RUM) ============
+faro.receiver "default" {
+  server {
+    listen_address = "0.0.0.0"
+    listen_port = 12347
+    cors_allowed_origins = ["*"]
+  }
+
+  output {
+    logs   = [loki.process.faro.receiver]
+    traces = [otelcol.exporter.otlp.tempo.input]
+  }
+}
+
+loki.process "faro" {
+  forward_to = [loki.write.default.receiver]
+
+  stage.json {
+    expressions = {
+      level = "level",
+      kind  = "kind",
+    }
+  }
+
+  stage.labels {
+    values = {
+      level = "",
+      kind  = "",
+    }
+  }
+}
+
 // ============ Batch Processor ============
 otelcol.processor.batch "default" {
   timeout = "5s"

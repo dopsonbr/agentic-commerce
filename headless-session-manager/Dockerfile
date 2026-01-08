@@ -5,8 +5,8 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --production
+# Install all dependencies (tsx needed for TypeScript execution)
+RUN npm ci
 
 # Install Playwright browsers (chromium only to save space)
 RUN npx playwright install chromium

@@ -15,7 +15,7 @@ docker compose build
 # Start observability stack first
 echo ""
 echo "[2/4] Starting observability stack..."
-docker compose up -d grafana prometheus tempo loki alloy faro-collector
+docker compose up -d grafana prometheus tempo loki alloy
 
 # Wait for observability stack to be healthy
 echo ""

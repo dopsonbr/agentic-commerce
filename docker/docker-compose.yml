@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   # ============ APPLICATION SERVICES ============
 
@@ -39,7 +37,7 @@ services:
       - "4200:80"
     depends_on:
       - shop-api
-      - faro-collector
+      - alloy
     networks:
       - agentic-net
     healthcheck:
@@ -115,7 +113,7 @@ services:
       - PORT=5173
     depends_on:
       - mcp-tools
-      - faro-collector
+      - alloy
     networks:
       - agentic-net
     healthcheck:
@@ -177,8 +175,6 @@ services:
     image: grafana/tempo:2.6.0
     ports:
       - "3200:3200"
-      - "4317:4317"
-      - "4318:4318"
     volumes:
       - ./tempo/tempo.yml:/etc/tempo/tempo.yml
       - tempo-data:/var/tempo
@@ -213,6 +209,9 @@ services:
     image: grafana/alloy:v1.4.2
     ports:
       - "12345:12345"
+      - "12347:12347"
+      - "4317:4317"
+      - "4318:4318"
     volumes:
       - ./alloy/config.alloy:/etc/alloy/config.alloy
     command:
@@ -223,20 +222,6 @@ services:
       - loki
       - tempo
       - prometheus
-    networks:
-      - agentic-net
-
-  faro-collector:
-    image: grafana/faro-collector:v0.8.0
-    ports:
-      - "12347:12347"
-    volumes:
-      - ./faro/faro.yml:/etc/faro/faro.yml
-    command:
-      - '--config=/etc/faro/faro.yml'
-    depends_on:
-      - loki
-      - tempo
     networks:
       - agentic-net
 

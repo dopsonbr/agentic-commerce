@@ -1,4 +1,5 @@
 import { ActionReducer, Action } from '@ngrx/store';
+import { LogLevel } from '@grafana/faro-web-sdk';
 import { getFaro } from './faro.config';
 
 // Action namespaces to log
@@ -22,7 +23,7 @@ export function faroMetaReducer<S>(reducer: ActionReducer<S>): ActionReducer<S> 
 
       // Also push as a log for Loki correlation
       faro.api.pushLog([`NgRx Action: ${action.type}`], {
-        level: 'info',
+        level: LogLevel.INFO,
         context: {
           action_type: action.type,
           payload: JSON.stringify(action),

@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "start": "node --loader tsx src/index.ts",
+    "start": "node --import tsx src/index.ts",
     "test": "vitest",
     "playwright:install": "playwright install chromium"
   },
