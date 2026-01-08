@@ -1,0 +1,236 @@
+services:
+  # ============ APPLICATION SERVICES ============
+
+  shop-api:
+    build:
+      context: ../shop-api
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - OTEL_SERVICE_NAME=shop-api
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://alloy:4318
+      - LOG_LEVEL=debug
+      - LOKI_URL=http://loki:3100
+    depends_on:
+      alloy:
+        condition: service_started
+      loki:
+        condition: service_started
+    networks:
+      - agentic-net
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:3000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  shop-ui:
+    build:
+      context: ../shop-ui
+      dockerfile: Dockerfile
+      args:
+        - FARO_COLLECTOR_URL=http://localhost:12347/collect
+    ports:
+      - "4200:80"
+    depends_on:
+      - shop-api
+      - alloy
+    networks:
+      - agentic-net
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:80"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  mcp-tools:
+    build:
+      context: ../mcp-tools
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - SHOP_API_URL=http://shop-api:3000
+      - HEADLESS_URL=http://headless-session-manager:3002
+      - OTEL_SERVICE_NAME=mcp-tools
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://alloy:4318
+      - LOG_LEVEL=debug
+      - LOKI_URL=http://loki:3100
+    depends_on:
+      - shop-api
+      - headless-session-manager
+      - alloy
+      - loki
+    networks:
+      - agentic-net
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:3001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  headless-session-manager:
+    build:
+      context: ../headless-session-manager
+      dockerfile: Dockerfile
+    ports:
+      - "3002:3002"
+    environment:
+      - PORT=3002
+      - SHOP_UI_URL=http://shop-ui:80
+      - OTEL_SERVICE_NAME=headless-session-manager
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://alloy:4318
+      - LOG_LEVEL=debug
+      - LOKI_URL=http://loki:3100
+    depends_on:
+      - shop-ui
+      - alloy
+      - loki
+    networks:
+      - agentic-net
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+    # No healthcheck - Playwright startup is slow
+
+  chat-ui:
+    build:
+      context: ../chat-ui
+      dockerfile: Dockerfile
+      args:
+        - VITE_FARO_COLLECTOR_URL=http://localhost:12347/collect
+        - VITE_MCP_TOOLS_URL=http://localhost:3001
+    ports:
+      - "5173:5173"
+    environment:
+      - PORT=5173
+    depends_on:
+      - mcp-tools
+      - alloy
+    networks:
+      - agentic-net
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:5173"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # ============ OBSERVABILITY STACK ============
+
+  grafana:
+    image: grafana/grafana:11.3.0
+    ports:
+      - "3003:3000"
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_FEATURE_TOGGLES_ENABLE=traceqlEditor tempoSearch tempoBackendSearch tempoApmTable correlations
+      - GF_LOG_LEVEL=warn
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - loki
+      - tempo
+      - prometheus
+    networks:
+      - agentic-net
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  prometheus:
+    image: prom/prometheus:v2.54.0
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=1h'
+      - '--web.enable-lifecycle'
+      - '--web.enable-remote-write-receiver'
+      - '--log.level=warn'
+    networks:
+      - agentic-net
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  tempo:
+    image: grafana/tempo:2.6.0
+    ports:
+      - "3200:3200"
+    volumes:
+      - ./tempo/tempo.yml:/etc/tempo/tempo.yml
+      - tempo-data:/var/tempo
+    command:
+      - '-config.file=/etc/tempo/tempo.yml'
+    networks:
+      - agentic-net
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3200/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  loki:
+    image: grafana/loki:3.2.0
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./loki/loki.yml:/etc/loki/loki.yml
+      - loki-data:/loki
+    command:
+      - '-config.file=/etc/loki/loki.yml'
+    networks:
+      - agentic-net
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3100/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  alloy:
+    image: grafana/alloy:v1.4.2
+    ports:
+      - "12345:12345"
+      - "12347:12347"
+      - "4317:4317"
+      - "4318:4318"
+    volumes:
+      - ./alloy/config.alloy:/etc/alloy/config.alloy
+    command:
+      - 'run'
+      - '/etc/alloy/config.alloy'
+      - '--server.http.listen-addr=0.0.0.0:12345'
+    depends_on:
+      - loki
+      - tempo
+      - prometheus
+    networks:
+      - agentic-net
+
+networks:
+  agentic-net:
+    driver: bridge
+
+volumes:
+  grafana-data:
+  prometheus-data:
+  tempo-data:
+  loki-data:

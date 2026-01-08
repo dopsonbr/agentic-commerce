@@ -1,0 +1,119 @@
+// ============ OTLP Receiver ============
+otelcol.receiver.otlp "default" {
+  http {
+    endpoint = "0.0.0.0:4318"
+  }
+  grpc {
+    endpoint = "0.0.0.0:4317"
+  }
+
+  output {
+    traces  = [otelcol.processor.batch.default.input]
+    metrics = [otelcol.processor.batch.default.input]
+    logs    = [otelcol.processor.batch.default.input]
+  }
+}
+
+// ============ Faro Receiver (Browser RUM) ============
+faro.receiver "default" {
+  server {
+    listen_address = "0.0.0.0"
+    listen_port = 12347
+    cors_allowed_origins = ["*"]
+  }
+
+  output {
+    logs   = [loki.process.faro.receiver]
+    traces = [otelcol.exporter.otlp.tempo.input]
+  }
+}
+
+// Process Faro logs to extract labels from the log line
+loki.process "faro" {
+  forward_to = [loki.write.default.receiver]
+
+  // Add static label for source
+  stage.static_labels {
+    values = {
+      source = "faro",
+    }
+  }
+
+  // Extract top-level fields
+  stage.json {
+    expressions = {
+      kind       = "kind",
+      level      = "level",
+      event_name = "name",
+      app        = "app",
+    }
+  }
+
+  // Extract nested app.name
+  stage.json {
+    source      = "app"
+    expressions = {
+      app_name = "name",
+    }
+  }
+
+  // Add labels from extracted values
+  stage.labels {
+    values = {
+      kind       = "",
+      level      = "",
+      app        = "app_name",
+      event_name = "",
+    }
+  }
+}
+
+// ============ Batch Processor ============
+otelcol.processor.batch "default" {
+  timeout = "5s"
+  send_batch_size = 1000
+
+  output {
+    traces  = [otelcol.exporter.otlp.tempo.input]
+    metrics = [otelcol.exporter.prometheus.default.input]
+    logs    = [otelcol.exporter.loki.default.input]
+  }
+}
+
+// ============ Tempo Exporter (Traces) ============
+otelcol.exporter.otlp "tempo" {
+  client {
+    endpoint = "tempo:4317"
+    tls {
+      insecure = true
+    }
+  }
+}
+
+// ============ Prometheus Exporter (Metrics) ============
+otelcol.exporter.prometheus "default" {
+  forward_to = [prometheus.remote_write.default.receiver]
+}
+
+prometheus.remote_write "default" {
+  endpoint {
+    url = "http://prometheus:9090/api/v1/write"
+  }
+}
+
+// ============ Loki Exporter (Logs) ============
+otelcol.exporter.loki "default" {
+  forward_to = [loki.write.default.receiver]
+}
+
+loki.write "default" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}
+
+// ============ Logging ============
+logging {
+  level  = "info"
+  format = "logfmt"
+}
