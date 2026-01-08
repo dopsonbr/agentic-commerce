@@ -1,4 +1,8 @@
-# Implementation Retrospective: shop-ui Automation Bridge
+# Implementation Retrospectives
+
+---
+
+# Phase 2: shop-ui Automation Bridge
 
 **Date:** 2026-01-07
 **Scope:** shop-ui automation bridge implementation (Phase 2 of IMPLEMENTATION_PLAN.md)
@@ -223,3 +227,162 @@ Tests: 15 passed
 - `shop-ui/src/app/automation/automation.service.ts` - Add isDevMode() logging
 - `shop-ui/src/app/automation/automation.service.spec.ts` - Add new tests
 - `shop-ui/src/app/app.config.ts` - Use ENVIRONMENT_INITIALIZER
+
+---
+
+# Phase 3: headless-session-manager
+
+**Date:** 2026-01-07
+**Duration:** ~1 session
+**Status:** ✅ Complete
+
+### Summary
+
+Implemented the headless-session-manager service which manages Playwright browser sessions for executing NgRx actions via the shop-ui automation bridge. Converted from Bun to Node.js due to Playwright incompatibility.
+
+---
+
+## What Went Well
+
+### 1. Clear Implementation Plan
+- The detailed IMPLEMENTATION_PLAN.md provided excellent guidance with code examples
+- Made implementation straightforward - knew exactly what to build
+
+### 2. Modular Architecture
+- Separating types, session manager, and Express server into distinct files
+- Made the code easy to understand and test
+- Clean separation of concerns
+
+### 3. Critical Review Caught Real Issues
+- Self-review identified 6 legitimate issues that would have caused integration problems:
+  - Missing CORS (would break mcp-tools integration)
+  - Browser resource leaks
+  - Race conditions on concurrent session creation
+  - Missing waitUntil for page navigation
+  - Input validation gaps
+  - No session cleanup mechanism
+
+### 4. TypeScript Strictness
+- Using strict TypeScript caught issues early
+- Express route params typing issues found at compile time, not runtime
+
+### 5. Quick Iteration
+- Implementation + review + fix cycle was efficient within a single session
+
+---
+
+## What Went Poorly
+
+### 1. CORS Not in Original Plan
+**Problem:** The implementation plan didn't mention CORS, which is essential for cross-origin requests from mcp-tools.
+
+**Should have done:** Anticipated this since services run on different ports (3001 → 3002).
+
+### 2. npm Install in Wrong Directory
+**Problem:** Initially ran `npm install cors` in root directory instead of headless-session-manager.
+
+**Impact:** Confusion when verifying dependencies; had to reinstall in correct location.
+
+### 3. Race Condition Not Obvious from Plan
+**Problem:** The implementation plan's code example didn't handle concurrent session creation for the same sessionId.
+
+**Impact:** Could cause multiple browsers for same session, resource leaks, undefined behavior.
+
+### 4. No Integration Test with shop-ui
+**Problem:** Only tested health endpoint; couldn't fully test session creation without shop-ui running.
+
+**Impact:** Won't know if bridge integration works until full stack is up.
+
+### 5. Stale Session Management Not in Plan
+**Problem:** Sessions track `lastActivity` but the plan had no mechanism to clean them up.
+
+**Impact:** Memory/resource leaks in long-running deployments.
+
+---
+
+## Issues Identified During Review
+
+| Issue | Severity | Resolution |
+|-------|----------|------------|
+| Missing CORS | High | Added `cors` middleware |
+| Browser leak on failure | High | Added try/catch with cleanup |
+| Race condition in createSession | Medium | Added `pendingCreations` Set |
+| Missing waitUntil | Medium | Added `{ waitUntil: 'networkidle' }` |
+| Missing action.type validation | Low | Added string type check |
+| No session cleanup | Low | Added cleanup interval (30min idle, 5min check) |
+
+---
+
+## Lessons Learned / Memory Updates
+
+### For Future Implementations
+
+1. **Always include CORS in multi-service architectures**
+   - Any time services communicate across different ports/origins, CORS must be configured
+   - Add to implementation plans for all Express servers
+
+2. **Resource cleanup patterns**
+   - When creating resources that must be cleaned up, always use try/catch/finally:
+   ```typescript
+   let resource = null;
+   try {
+     resource = await createResource();
+     // use resource
+   } catch (error) {
+     if (resource) await resource.cleanup();
+     throw error;
+   }
+   ```
+
+3. **Concurrent operation guards**
+   - For operations that shouldn't run concurrently for the same ID:
+   ```typescript
+   private pending = new Set<string>();
+   if (this.pending.has(id)) { /* wait or throw */ }
+   this.pending.add(id);
+   try { /* operation */ } finally { this.pending.delete(id); }
+   ```
+
+4. **Page navigation reliability**
+   - Always use `waitUntil: 'networkidle'` or `'domcontentloaded'` with Playwright's `page.goto()` for SPAs
+
+5. **Verify npm directory**
+   - Always confirm correct directory before running npm commands
+   - Use `cd /path && npm install` pattern
+
+### CLAUDE.md Updates Recommended
+
+Consider adding to CLAUDE.md:
+
+```markdown
+### Cross-Service Communication
+- All services use CORS for cross-origin requests
+- headless-session-manager (3002) is called by mcp-tools (3001)
+- Always add `cors` middleware to Express servers in this project
+
+### Resource Management
+- Browser sessions must be cleaned up on failure
+- Use try/catch/finally for resource lifecycle
+- Implement idle timeouts for long-running resources (30min default)
+```
+
+---
+
+## Metrics
+
+| Metric | Value |
+|--------|-------|
+| Files created | 3 (types.ts, session-manager.ts, index.ts) |
+| Files modified | 2 (package.json, tsconfig.json) |
+| Files deleted | 2 (bun.lock, index.ts stub) |
+| Lines of code | ~320 (TypeScript) |
+| Dependencies added | express, playwright, cors, uuid, tsx, vitest |
+| Commits | 2 (initial implementation + review fixes) |
+
+---
+
+## Action Items for Next Phase
+
+- [ ] Phase 4: mcp-tools server implementation
+- [ ] Integration testing: shop-api + shop-ui + headless-session-manager
+- [ ] Update CLAUDE.md with CORS and resource management guidance
