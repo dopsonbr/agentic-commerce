@@ -11,7 +11,8 @@ export function initFaro(): Faro | null {
   if (faro) return faro;
   if (typeof window === 'undefined') return null;
 
-  const collectorUrl = import.meta.env.VITE_FARO_COLLECTOR_URL || 'http://localhost:12347/collect';
+  // Bun doesn't use Vite's import.meta.env pattern - use default URL
+  const collectorUrl = 'http://localhost:12347/collect';
 
   try {
     faro = initializeFaro({
