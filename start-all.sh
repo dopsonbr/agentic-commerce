@@ -135,20 +135,26 @@ echo ""
 
 # Start services in order
 echo -e "${YELLOW}Starting services...${NC}"
+echo ""
 
 # 1. shop-api (port 3000)
+echo -e "  ${BLUE}shop-api${NC} - REST API for products and cart"
 start_service "shop-api" "shop-api" "bun run dev" 3000 || FAILED=1
 
 # 2. shop-ui (port 4200)
+echo -e "  ${BLUE}shop-ui${NC} - Angular shopping SPA with NgRx"
 start_service "shop-ui" "shop-ui" "npm start" 4200 || FAILED=1
 
 # 3. headless-session-manager (port 3002)
+echo -e "  ${BLUE}headless-session-manager${NC} - Playwright browser sessions"
 start_service "headless-session-manager" "headless-session-manager" "npm run dev" 3002 || FAILED=1
 
 # 4. mcp-tools (port 3001)
+echo -e "  ${BLUE}mcp-tools${NC} - MCP tool server (5 tools)"
 start_service "mcp-tools" "mcp-tools" "bun run dev" 3001 || FAILED=1
 
 # 5. chat-ui (port 5173)
+echo -e "  ${BLUE}chat-ui${NC} - Chat interface with scripted agent"
 start_service "chat-ui" "chat-ui" "bun run dev" 5173 || FAILED=1
 
 if [ $FAILED -eq 1 ]; then
@@ -176,19 +182,29 @@ if [ $FAILED -eq 1 ]; then
 fi
 
 echo ""
-echo -e "${GREEN}========================================${NC}"
-echo -e "${GREEN}  All services are running!            ${NC}"
-echo -e "${GREEN}========================================${NC}"
+echo -e "${GREEN}════════════════════════════════════════════════════════════════${NC}"
+echo -e "${GREEN}  All 5 services are running!${NC}"
+echo -e "${GREEN}════════════════════════════════════════════════════════════════${NC}"
 echo ""
-echo "Service URLs:"
-echo "  shop-api:                  http://localhost:3000"
-echo "  shop-ui:                   http://localhost:4200"
-echo "  shop-ui (automation):      http://localhost:4200?automation=1"
-echo "  headless-session-manager:  http://localhost:3002"
-echo "  mcp-tools:                 http://localhost:3001"
-echo -e "  ${GREEN}chat-ui:                   http://localhost:5173${NC} <- Open this!"
+echo -e "${YELLOW}Running Services:${NC}"
 echo ""
-echo "Logs: $LOG_DIR/"
+echo "  Service                     Port    URL"
+echo "  ─────────────────────────────────────────────────────────────"
+echo "  shop-api                    3000    http://localhost:3000"
+echo "  shop-ui                     4200    http://localhost:4200"
+echo "  headless-session-manager    3002    http://localhost:3002"
+echo "  mcp-tools                   3001    http://localhost:3001"
+echo -e "  ${GREEN}chat-ui                     5173    http://localhost:5173${NC}"
 echo ""
-echo "To stop all services: ./stop-all.sh"
+echo -e "${YELLOW}Quick Start:${NC}"
+echo -e "  Open ${GREEN}http://localhost:5173${NC} in your browser to start the demo"
+echo ""
+echo -e "${YELLOW}Demo Commands to Try:${NC}"
+echo "  \"my customer id is 123456\"    - Set your customer ID"
+echo "  \"show me hammers\"              - Search for products"
+echo "  \"add it to my cart\"            - Add last product to cart"
+echo "  \"what's in my cart\"            - View cart contents"
+echo ""
+echo -e "${YELLOW}Logs:${NC} $LOG_DIR/"
+echo -e "${YELLOW}Stop:${NC} ./stop-all.sh"
 echo ""
