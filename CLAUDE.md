@@ -10,7 +10,7 @@ Agentic Commerce is a local-first POC demonstrating "agentic shopping" where a c
 
 ```
 agentic-commerce/
-├── shop-ui/                  # Angular 21 SPA with NgRx (npm)
+├── shop-ui/                  # Angular 21 SPA with NgRx (pnpm)
 ├── shop-api/                 # REST API for products/cart (Bun)
 ├── chat-ui/                  # Chat interface (Bun + React)
 ├── mcp-tools/                # MCP tool server (Bun)

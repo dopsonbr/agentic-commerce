@@ -58,6 +58,10 @@ export class SessionManager {
 
       const page = await browser.newPage();
 
+      // Suppress console messages from the page (clean demo output)
+      page.on('console', () => { /* suppress */ });
+      page.on('pageerror', () => { /* suppress */ });
+
       // Navigate to shop-ui in automation mode
       const url = `${SHOP_UI_URL}?automation=1`;
       console.log(`[SessionManager] Navigating to: ${url}`);

@@ -10,10 +10,10 @@ Each app has its own detailed, self-contained implementation plan with step-by-s
 
 | App | Plan | Status | Runtime |
 |-----|------|--------|---------|
-| **shop-ui** | [`shop-ui/IMPLEMENTATION_PLAN.md`](./shop-ui/IMPLEMENTATION_PLAN.md) | ✅ Done | npm (Angular) |
+| **shop-ui** | [`shop-ui/IMPLEMENTATION_PLAN.md`](./shop-ui/IMPLEMENTATION_PLAN.md) | ✅ Done | pnpm (Angular) |
 | **headless-session-manager** | [`headless-session-manager/IMPLEMENTATION_PLAN.md`](./headless-session-manager/IMPLEMENTATION_PLAN.md) | ✅ Done | Node.js (converted from Bun) |
 | **mcp-tools** | [`mcp-tools/IMPLEMENTATION_PLAN.md`](./mcp-tools/IMPLEMENTATION_PLAN.md) | ✅ Done | Bun |
-| **chat-ui** | [`chat-ui/IMPLEMENTATION_PLAN.md`](./chat-ui/IMPLEMENTATION_PLAN.md) | Pending | Bun |
+| **chat-ui** | [`chat-ui/IMPLEMENTATION_PLAN.md`](./chat-ui/IMPLEMENTATION_PLAN.md) | ✅ Done | Bun |
 | **shop-api** | N/A (already implemented) | ✅ Done | Bun |
 
 ---
@@ -660,18 +660,20 @@ function ToolResultCard({ toolName, result }) {
 
 ---
 
-## Phase 6 — Integration + Demo Hardening
+## Phase 6 — Integration + Demo Hardening ✅ COMPLETE
+
+> **Completed:** 2026-01-08 | **See:** [`DEMO.md`](./DEMO.md)
 
 ### Goal
 Ensure reliable end-to-end demo experience.
 
 ### Deliverables
 
-- [ ] Root `start-all.sh` script
-- [ ] Session reset button in chat-ui
-- [ ] Health check endpoints for all services
-- [ ] Demo script documentation
-- [ ] Console error suppression in headless mode
+- [x] Root `start-all.sh` script
+- [x] Session reset button in chat-ui
+- [x] Health check endpoints for all services
+- [x] Demo script documentation
+- [x] Console error suppression in headless mode
 
 ### Demo Script
 
@@ -723,12 +725,12 @@ Week 3:
 
 ---
 
-## Acceptance Criteria
+## Acceptance Criteria ✅ ALL PASSED
 
-- [ ] All 5 services start with single command
-- [ ] "my customer id is X" sets session context
-- [ ] "show me [product]" returns product cards
-- [ ] "add [product] to cart" executes via headless browser
-- [ ] "what's in my cart" shows cart contents
-- [ ] Cart panel updates after add_to_cart
-- [ ] Demo repeatable without manual intervention
+- [x] All 5 services start with single command (`./start-all.sh`)
+- [x] "my customer id is X" sets session context
+- [x] "show me [product]" returns product cards
+- [x] "add [product] to cart" executes via headless browser
+- [x] "what's in my cart" shows cart contents
+- [x] Cart panel updates after add_to_cart
+- [x] Demo repeatable without manual intervention (`./stop-all.sh && ./start-all.sh`)

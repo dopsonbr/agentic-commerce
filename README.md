@@ -126,7 +126,7 @@ Existing shopping Angular SPA with NgRx state management.
   - await success/failure actions with correlation IDs
   - expose cart/context snapshots
 
-**Stack:** Angular 21, NgRx, npm
+**Stack:** Angular 21, NgRx, pnpm
 **Port:** 4200
 
 ---
@@ -214,7 +214,7 @@ Assistant: [calls get_cart] → [Cart Card: 1 item, $24.99 total]
 ### Prerequisites
 - Node.js 20+ (required for Playwright)
 - Bun 1.0+ (for shop-api, mcp-tools, chat-ui)
-- npm (for shop-ui Angular app)
+- pnpm (for shop-ui and headless-session-manager)
 
 ### Startup Order
 
@@ -223,10 +223,10 @@ Assistant: [calls get_cart] → [Cart Card: 1 item, $24.99 total]
 cd shop-api && bun run dev
 
 # Terminal 2: Start shop-ui
-cd shop-ui && npm start
+cd shop-ui && pnpm start
 
 # Terminal 3: Start headless-session-manager
-cd headless-session-manager && npm run dev
+cd headless-session-manager && pnpm run dev
 
 # Terminal 4: Start mcp-tools
 cd mcp-tools && bun run dev
@@ -242,7 +242,7 @@ cd chat-ui && bun run dev
 | shop-api | 3000 | Bun |
 | mcp-tools | 3001 | Bun |
 | headless-session-manager | 3002 | Node.js |
-| shop-ui | 4200 | npm/ng |
+| shop-ui | 4200 | pnpm/ng |
 | chat-ui | 5173 | Bun |
 
 ---

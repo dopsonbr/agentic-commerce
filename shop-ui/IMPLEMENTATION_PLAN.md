@@ -369,7 +369,7 @@ src/app/automation/
 
 ### Manual Testing
 
-1. Start shop-ui: `npm start`
+1. Start shop-ui: `pnpm start`
 2. Navigate to: `http://localhost:4200?automation=1`
 3. Open browser console
 4. Verify: `window.__agentBridge.isReady()` returns `true`

@@ -15,8 +15,8 @@ Playwright is **not compatible with Bun runtime** due to:
 
 1. Delete `bun.lock` (if exists)
 2. Replace `package.json` with Node.js version (see below)
-3. Create `package-lock.json` via `npm install`
-4. Use `npm` commands instead of `bun`
+3. Create `pnpm-lock.yaml` via `pnpm install`
+4. Use `pnpm` commands instead of `bun`
 5. Use Express instead of `Bun.serve()`
 
 ---
@@ -148,8 +148,8 @@ rm -f bun.lock index.ts
 
 **Install dependencies:**
 ```bash
-npm install
-npm run playwright:install
+pnpm install
+pnpm run playwright:install
 ```
 
 ---
@@ -603,7 +603,7 @@ Health check endpoint.
 
 ```bash
 # Start the service
-npm run dev
+pnpm run dev
 
 # Create a session
 curl -X POST http://localhost:3002/sessions \

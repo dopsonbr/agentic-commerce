@@ -691,7 +691,7 @@ Delete a chat session context.
 ```bash
 # Start dependencies first
 cd ../shop-api && bun run dev &
-cd ../headless-session-manager && npm run dev &
+cd ../headless-session-manager && pnpm run dev &
 
 # Start mcp-tools
 bun run dev
