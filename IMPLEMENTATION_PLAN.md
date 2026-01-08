@@ -13,8 +13,14 @@ Each app has its own detailed, self-contained implementation plan with step-by-s
 | **shop-ui** | [`shop-ui/IMPLEMENTATION_PLAN.md`](./shop-ui/IMPLEMENTATION_PLAN.md) | ✅ Done | npm (Angular) |
 | **headless-session-manager** | [`headless-session-manager/IMPLEMENTATION_PLAN.md`](./headless-session-manager/IMPLEMENTATION_PLAN.md) | ✅ Done | Node.js (converted from Bun) |
 | **mcp-tools** | [`mcp-tools/IMPLEMENTATION_PLAN.md`](./mcp-tools/IMPLEMENTATION_PLAN.md) | ✅ Done | Bun |
-| **chat-ui** | [`chat-ui/IMPLEMENTATION_PLAN.md`](./chat-ui/IMPLEMENTATION_PLAN.md) | Pending | Bun |
+| **chat-ui** | [`chat-ui/IMPLEMENTATION_PLAN.md`](./chat-ui/IMPLEMENTATION_PLAN.md) | ✅ Done | Bun |
 | **shop-api** | N/A (already implemented) | ✅ Done | Bun |
+
+### Cross-Cutting Plans
+
+| Plan | Description | Status |
+|------|-------------|--------|
+| **Phase 7: Docker + Observability** | [`PHASE_7_DOCKER_OBSERVABILITY_PLAN.md`](./PHASE_7_DOCKER_OBSERVABILITY_PLAN.md) | Pending |
 
 ---
 
@@ -689,6 +695,50 @@ Ensure reliable end-to-end demo experience.
 6. Enter: "what's in my cart"
    → See: Cart contents card
 ```
+
+---
+
+## Phase 7 — Docker + Full Observability
+
+> **Plan:** [`PHASE_7_DOCKER_OBSERVABILITY_PLAN.md`](./PHASE_7_DOCKER_OBSERVABILITY_PLAN.md) | **Status:** Pending
+
+### Goal
+Containerize the entire stack and add comprehensive observability using the Grafana LGTM stack.
+
+### Key Features
+- **Docker Compose** for all 5 application services
+- **Grafana** dashboards (port 3003 to avoid conflict with shop-api)
+- **Tempo** for distributed tracing
+- **Loki** for log aggregation
+- **Prometheus** for metrics
+- **Faro** for frontend RUM (shop-ui + chat-ui)
+- **NgRx action logging** to Faro ([Cart] and [Products] namespaces)
+- **W3C Trace Context** propagation across all services
+- **1-hour data retention** for local development
+
+### Port Mapping (No Conflicts)
+
+| Service | Port | Notes |
+|---------|------|-------|
+| shop-api | 3000 | REST API |
+| mcp-tools | 3001 | MCP tool server |
+| headless-session-manager | 3002 | Playwright sessions |
+| **Grafana** | **3003** | Dashboards (remapped) |
+| shop-ui | 4200 | Angular SPA |
+| chat-ui | 5173 | React chat |
+| Prometheus | 9090 | Metrics store |
+| Loki | 3100 | Log aggregation |
+| Tempo | 3200 | Trace backend |
+
+### Deliverables
+- [ ] Docker Compose configuration with all services
+- [ ] Dockerfiles for each application
+- [ ] Grafana provisioned dashboards (Overview, User Journey, NgRx Actions, Tool Invocations)
+- [ ] Structured JSON logging across all backends
+- [ ] Faro SDK integration in shop-ui and chat-ui
+- [ ] NgRx meta-reducer for action logging
+- [ ] Trace context propagation through service chain
+- [ ] Observability user guide (`docs/OBSERVABILITY_GUIDE.md`)
 
 ---
 
