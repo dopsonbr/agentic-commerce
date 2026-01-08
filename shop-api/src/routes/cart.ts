@@ -9,10 +9,14 @@ import {
 import { json } from "../cors.ts";
 
 // Helper to safely parse JSON body
-async function parseJsonBody<T>(req: Request): Promise<{ data: T } | { error: Response }> {
+async function parseJsonBody<T extends object>(req: Request): Promise<{ data: T } | { error: Response }> {
   try {
-    const data = await req.json() as T;
-    return { data };
+    const data = await req.json();
+    // Validate that the body is an object (not null, array, or primitive)
+    if (data === null || typeof data !== 'object' || Array.isArray(data)) {
+      return { error: json({ error: "Request body must be a JSON object" }, { status: 400 }) };
+    }
+    return { data: data as T };
   } catch {
     return { error: json({ error: "Invalid JSON body" }, { status: 400 }) };
   }

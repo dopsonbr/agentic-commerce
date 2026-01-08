@@ -95,7 +95,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 });
 
 // Update active sessions gauge periodically
-setInterval(() => {
+const metricsInterval = setInterval(() => {
   activeSessions.set(sessionManager.getSessionCount());
 }, 5000);
 
@@ -313,12 +313,14 @@ app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
 // Graceful shutdown
 process.on('SIGINT', async () => {
   logger.info('Shutting down (SIGINT)');
+  clearInterval(metricsInterval);
   await sessionManager.destroyAllSessions();
   process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
   logger.info('Terminating (SIGTERM)');
+  clearInterval(metricsInterval);
   await sessionManager.destroyAllSessions();
   process.exit(0);
 });

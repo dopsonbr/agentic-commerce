@@ -27,10 +27,14 @@ const toolInvocationsTotal = createCounter(
 const PORT = process.env['PORT'] ? parseInt(process.env['PORT']) : 3001;
 
 // Helper to safely parse JSON body
-async function safeJsonParse<T>(req: Request): Promise<{ data: T } | { error: string }> {
+async function safeJsonParse<T extends object>(req: Request): Promise<{ data: T } | { error: string }> {
   try {
-    const data = await req.json() as T;
-    return { data };
+    const data = await req.json();
+    // Validate that the body is an object (not null, array, or primitive)
+    if (data === null || typeof data !== 'object' || Array.isArray(data)) {
+      return { error: 'Request body must be a JSON object' };
+    }
+    return { data: data as T };
   } catch {
     return { error: 'Invalid JSON body' };
   }
