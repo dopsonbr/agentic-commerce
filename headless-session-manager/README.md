@@ -29,16 +29,16 @@ This service runs **one headless Playwright browser per chat session** and execu
 
 ```bash
 # Install dependencies
-npm install
+pnpm install
 
 # Install Playwright browsers
-npx playwright install chromium
+pnpm exec playwright install chromium
 
 # Start development server
-npm run dev
+pnpm run dev
 
 # Run tests
-npm test
+pnpm test
 ```
 
 ## Configuration
