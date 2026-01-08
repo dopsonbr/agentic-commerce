@@ -6,7 +6,7 @@ import { Cart } from '../models/cart.model';
 @Injectable({ providedIn: 'root' })
 export class CartService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = 'http://localhost:3000/api/cart';
+  private readonly baseUrl = '/api/cart';
 
   create(customerId: string): Observable<Cart> {
     return this.http.post<Cart>(this.baseUrl, { customerId });
