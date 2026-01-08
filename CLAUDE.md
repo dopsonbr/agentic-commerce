@@ -170,7 +170,7 @@ Pattern matching for deterministic tool invocation:
 | 2 | shop-ui automation bridge | ✅ Complete |
 | 3 | Headless session manager | ✅ Complete |
 | 4 | MCP tools server | ✅ Complete |
-| 5 | Chat UI | Pending |
+| 5 | Chat UI | ✅ Complete |
 | 6 | Integration + demo hardening | Pending |
 
 ## Detailed Implementation Plans
@@ -182,7 +182,7 @@ Each app has its own detailed, self-contained implementation plan:
 | shop-ui | `shop-ui/IMPLEMENTATION_PLAN.md` | ✅ Complete |
 | headless-session-manager | `headless-session-manager/IMPLEMENTATION_PLAN.md` | ✅ Complete (converted to Node.js) |
 | mcp-tools | `mcp-tools/IMPLEMENTATION_PLAN.md` | ✅ Complete |
-| chat-ui | `chat-ui/IMPLEMENTATION_PLAN.md` | Pending |
+| chat-ui | `chat-ui/IMPLEMENTATION_PLAN.md` | ✅ Complete |
 
 See `IMPLEMENTATION_PLAN.md` for the overall roadmap, dependency graph, and architecture diagrams.
 

@@ -947,14 +947,30 @@ bun run dev
 
 ## Acceptance Criteria
 
-- [ ] Chat interface renders with conversation and context panels
-- [ ] User messages appear in chat
-- [ ] Scripted agent matches patterns correctly
-- [ ] Tool calls display with loading state
-- [ ] Tool results render appropriate cards
-- [ ] Cart summary updates after add_to_cart
-- [ ] Session info shows customer ID
-- [ ] Help/greeting messages work
+- [x] Chat interface renders with conversation and context panels
+- [x] User messages appear in chat
+- [x] Scripted agent matches patterns correctly
+- [x] Tool calls display with loading state
+- [x] Tool results render appropriate cards
+- [x] Cart summary updates after add_to_cart
+- [x] Session info shows customer ID
+- [x] Help/greeting messages work
+
+## Additional Features Implemented
+
+- [x] Auto-scroll to latest message
+- [x] Session reset button
+- [x] Quick tips panel for user guidance
+- [x] Tool args displayed in tool call cards
+- [x] Defensive error handling for empty SKU
+- [x] Pattern priority fix (get_cart before search_products)
+
+## Unit Tests
+
+- [x] Pattern matching tests (25 tests)
+- [x] MCP client tests with fetch mocking (10 tests)
+- [x] Cart state logic tests (16 tests)
+- All 51 tests passing
 
 ---
 

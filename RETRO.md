@@ -572,8 +572,183 @@ Add to Development Patterns section:
 
 ## Action Items for Next Phase
 
-- [ ] Phase 5: chat-ui implementation
+- [x] Phase 5: chat-ui implementation ✅ Complete
 - [x] Add unit tests for mcp-tools handlers (41 tests added)
 - [ ] Integration test: full flow from chat-ui → mcp-tools → headless → shop-ui → shop-api
 - [x] Update CLAUDE.md with state propagation patterns
 - [ ] Verify add_to_cart works in environment with Playwright browsers
+
+---
+
+# Phase 5: chat-ui
+
+**Date:** 2026-01-08
+**Duration:** ~1 session
+**Status:** ✅ Complete
+
+### Summary
+
+Implemented the chat-ui with scripted agent mode for the agentic shopping POC. Created pattern-matching agent, MCP client service, React hooks for state management, and full UI component library. Added 51 unit tests that caught 2 real bugs.
+
+---
+
+## What Went Well
+
+### 1. Implementation Plan Was Comprehensive and Accurate
+- The detailed `chat-ui/IMPLEMENTATION_PLAN.md` with code examples made implementation straightforward
+- File structure and component breakdown was well-thought-out
+- Pattern matching examples in the plan translated directly to working code
+
+### 2. Existing Infrastructure Was Solid
+- mcp-tools API was well-documented and worked as expected
+- CORS was already configured (lesson from Phase 3/4 retros)
+- Session management patterns were already established
+
+### 3. Incremental Improvements Over Plan
+- Added auto-scroll for better UX
+- Added session reset functionality
+- Added quick tips panel for user guidance
+- Added tool args display for debugging visibility
+
+### 4. Unit Tests Caught Real Bugs
+- Tests discovered pattern matching priority issue ("show my cart" → search instead of cart)
+- Tests found regex capture issue ("search for X" captured "for X")
+- Testing forced explicit extraction of business logic for better testability
+
+### 5. TypeScript Caught Issues Early
+- Type checking identified null safety issues before runtime
+- Strict typing ensured API contract compliance
+
+---
+
+## What Went Poorly
+
+### 1. Pattern Matching Order Bug
+**Problem:** Plan didn't consider that pattern order matters for disambiguation.
+
+**Example:** "show my cart" matched search_products before get_cart because patterns were added in logical grouping order, not priority order.
+
+**Should have done:** Order patterns by specificity - most specific first.
+
+### 2. Regex Complexity
+**Problem:** Original search pattern tried to handle too many variations in one regex.
+
+**Example:** "search for X" vs "search X" needed separate patterns because:
+```typescript
+// Original (buggy):
+/(?:show|find|search|look\s+for|get)\s+(.+)/i
+// "search for hammers" captured "for hammers"
+
+// Fixed (two patterns):
+/(?:show|find|get)\s+(.+)/i          // "show hammers", "find hammers"
+/(?:search|look)\s+for\s+(.+)/i      // "search for hammers"
+```
+
+### 3. Plan Had a Bug in Cart State Handling
+**Problem:** Plan showed `setCart(result as GetCartResult)` for both add_to_cart and get_cart.
+
+**Issue:** AddToCartResult has different shape than GetCartResult:
+```typescript
+// AddToCartResult: { success, cartId, item }
+// GetCartResult:   { cartId, customerId, items[], total }
+```
+
+**Impact:** Would have caused runtime type errors.
+
+**Fix:** Implementation correctly builds GetCartResult from AddToCartResult.
+
+### 4. Minor Plan Drift
+**Problem:** Plan showed emojis in UI (🔧, 🛒, 📋) but implementation omitted them.
+
+**Impact:** Cosmetic only, but shows plan-to-implementation drift.
+
+---
+
+## Issues Identified During Review
+
+| Issue | Severity | Resolution |
+|-------|----------|------------|
+| Pattern order causes "show cart" → search | High | Moved get_cart before search_products |
+| "search for X" captures "for X" | Medium | Split into two patterns |
+| Empty SKU on add without search | Medium | Added error guidance message |
+| Undefined products array crash | Low | Added defensive `?? []` |
+| Missing emojis from plan | Low | Left as-is (cleaner without) |
+
+---
+
+## Unit Tests Summary
+
+| Test File | Tests | Coverage |
+|-----------|-------|----------|
+| useScriptedAgent.test.ts | 25 | Pattern matching, all tools |
+| mcp-client.test.ts | 10 | API calls, error handling |
+| cartStateLogic.test.ts | 16 | Cart updates, edge cases |
+| **Total** | **51** | All passing |
+
+---
+
+## Lessons Learned / Memory Updates
+
+### For Future Implementations
+
+1. **Test pattern matching early**
+   - Write pattern matching tests BEFORE implementing the full UI
+   - Test edge cases and ambiguous inputs
+   - Consider pattern priority explicitly in design
+
+2. **Pattern ordering principle**
+   ```typescript
+   // Order patterns by specificity - most specific first
+   const patterns = [
+     { match: /show\s+(?:my\s+)?cart/i, tool: 'get_cart' },     // Specific
+     { match: /show\s+(.+)/i, tool: 'search_products' },        // Generic
+   ];
+   ```
+
+3. **Validate type shapes across services**
+   - When plan references API contracts, verify actual response shapes
+   - Don't assume similar-sounding operations have compatible types
+   - Add type assertions at service boundaries
+
+4. **Implement in order of testability**
+   - Start with pure business logic (patterns, state updates)
+   - Add React wrapper after logic is tested
+   - Keeps tests simple and fast
+
+5. **Cart state update pattern**
+   ```typescript
+   // Handle different result types explicitly
+   case 'add_to_cart': {
+     const r = result as AddToCartResult;
+     setCart(prev => mergeAddResult(prev, r));  // Build GetCartResult
+   }
+   case 'get_cart': {
+     const r = result as GetCartResult;
+     setCart(r);  // Direct assignment OK
+   }
+   ```
+
+---
+
+## Metrics
+
+| Metric | Value |
+|--------|-------|
+| Files created | 15 |
+| Lines of code | ~800 |
+| Unit tests | 51 |
+| Bugs found by tests | 2 |
+| Time to first working UI | ~30 min |
+| Time to complete with tests | ~60 min |
+| Commits | 4 |
+
+---
+
+## Action Items for Phase 6
+
+- [ ] Integration testing: full end-to-end flow
+- [ ] Add loading/error states for mcp-tools unavailability
+- [ ] Network timeout and retry handling
+- [ ] Consider keyboard shortcuts
+- [ ] Consider message history persistence
+- [ ] Demo hardening and polish
