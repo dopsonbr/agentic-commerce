@@ -303,3 +303,8 @@ if (executeResponse.status === 404) {
   - Session recovery (404 → recreate)
   - State propagation on session create/recover
 - Run `bun test` in mcp-tools before committing
+
+### Git Worktrees
+- Always place worktrees in the `.worktrees/` directory at the repository root
+- Use the branch name (with slashes replaced by dashes) as the worktree directory name
+- Example: `git worktree add .worktrees/claude-feature-branch claude/feature-branch`
