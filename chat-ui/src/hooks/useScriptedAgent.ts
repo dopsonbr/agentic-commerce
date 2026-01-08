@@ -45,15 +45,21 @@ const patterns: AgentPattern[] = [
   {
     match: /add\s+(?:the\s+)?(?:(.+?)\s+)?to\s+(?:my\s+)?cart/i,
     tool: 'add_to_cart',
-    extractArgs: (_match, context) => ({
-      sku: context.lastProductSku || '',
-      quantity: 1,
-    }),
+    extractArgs: (_match, context) => {
+      if (!context.lastProductSku) {
+        // Will trigger an error - handled in response
+        return { sku: '', quantity: 1 };
+      }
+      return {
+        sku: context.lastProductSku,
+        quantity: 1,
+      };
+    },
     response: (result: unknown) => {
       const r = result as { success: boolean; item?: { name: string } };
       return r.success
         ? `Added ${r.item?.name || 'item'} to your cart.`
-        : `Sorry, I couldn't add that to your cart.`;
+        : `Sorry, I couldn't add that to your cart. Try searching for a product first.`;
     },
   },
   // Get cart

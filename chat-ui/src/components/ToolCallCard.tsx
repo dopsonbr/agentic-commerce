@@ -36,7 +36,7 @@ export function ToolCallCard({ toolName, args, result }: Props) {
 function ToolResultRenderer({ toolName, result }: { toolName: string; result: unknown }) {
   switch (toolName) {
     case 'search_products': {
-      const searchResult = result as { products: Array<{
+      const searchResult = result as { products?: Array<{
         sku: string;
         name: string;
         description: string;
@@ -44,12 +44,13 @@ function ToolResultRenderer({ toolName, result }: { toolName: string; result: un
         category: string;
         inStock: boolean;
       }>; total: number };
-      if (searchResult.products.length === 0) {
+      const products = searchResult.products ?? [];
+      if (products.length === 0) {
         return <div className="text-gray-500">No products found</div>;
       }
       return (
         <div className="space-y-2">
-          {searchResult.products.map(product => (
+          {products.map(product => (
             <ProductCard key={product.sku} product={product} />
           ))}
         </div>
