@@ -927,7 +927,7 @@ chat-ui/
 ```bash
 # Start dependencies
 cd ../shop-api && bun run dev &
-cd ../headless-session-manager && npm run dev &
+cd ../headless-session-manager && pnpm run dev &
 cd ../mcp-tools && bun run dev &
 
 # Start chat-ui

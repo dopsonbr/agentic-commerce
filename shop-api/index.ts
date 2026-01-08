@@ -109,9 +109,11 @@ const server = Bun.serve({
   port: process.env.PORT || 3000,
   routes: {
     "/health": {
-      GET: () => new Response(JSON.stringify({ status: "ok" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }),
+      GET: () => Response.json({
+        status: "ok",
+        service: "shop-api",
+        timestamp: new Date().toISOString()
+      }, { headers: corsHeaders }),
     },
     "/metrics": {
       GET: () => new Response(getMetricsOutput(), {

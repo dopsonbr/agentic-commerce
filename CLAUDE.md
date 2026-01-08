@@ -10,7 +10,7 @@ Agentic Commerce is a local-first POC demonstrating "agentic shopping" where a c
 
 ```
 agentic-commerce/
-├── shop-ui/                  # Angular 21 SPA with NgRx (npm)
+├── shop-ui/                  # Angular 21 SPA with NgRx (pnpm)
 ├── shop-api/                 # REST API for products/cart (Bun)
 ├── chat-ui/                  # Chat interface (Bun + React)
 ├── mcp-tools/                # MCP tool server (Bun)
@@ -23,8 +23,8 @@ agentic-commerce/
 
 ### shop-ui (Angular + NgRx) - COMPLETE
 - **Port:** 4200
-- **Package Manager:** npm
-- **Commands:** `npm start`, `npm run build`, `npm test`
+- **Package Manager:** pnpm
+- **Commands:** `pnpm start`, `pnpm run build`, `pnpm test`
 - **Status:** ✅ Complete - automation bridge implemented
 - **POC Addition:** `window.__agentBridge` for programmatic control via `?automation=1`
 - **Automation Files:** `src/app/automation/` (types.ts, automation.service.ts, action-mappings.ts)
@@ -51,7 +51,7 @@ agentic-commerce/
 
 ### headless-session-manager (Node.js + Playwright) - COMPLETE
 - **Port:** 3002
-- **Commands:** `npm run dev`
+- **Commands:** `pnpm run dev`
 - **Status:** ✅ Complete - session manager with Playwright
 - **Runtime:** Node.js (Playwright incompatible with Bun)
 - **Dependencies:** `playwright`, `express`, `cors`
@@ -65,10 +65,10 @@ agentic-commerce/
 cd shop-api && bun run dev
 
 # Terminal 2: Start shop-ui
-cd shop-ui && npm start
+cd shop-ui && pnpm start
 
 # Terminal 3: Start headless-session-manager (Node.js!)
-cd headless-session-manager && npm run dev
+cd headless-session-manager && pnpm run dev
 
 # Terminal 4: Start mcp-tools
 cd mcp-tools && bun run dev
@@ -83,7 +83,7 @@ cd chat-ui && bun run dev
 | shop-api | 3000 | Bun |
 | mcp-tools | 3001 | Bun |
 | headless-session-manager | 3002 | Node.js |
-| shop-ui | 4200 | npm/ng |
+| shop-ui | 4200 | pnpm/ng |
 | chat-ui | 5173 | Bun |
 
 ## Technology Guidelines
@@ -95,10 +95,12 @@ cd chat-ui && bun run dev
 - Use `Bun.serve()` for HTTP servers (not Express)
 - Bun auto-loads `.env` files
 
-### Node.js App (headless-session-manager)
-- Use `npm` for package management
-- Use Express or native http for server
-- Required because Playwright is incompatible with Bun
+### pnpm Apps (shop-ui, headless-session-manager)
+- Use `pnpm` for package management
+- Use `pnpm install` to install dependencies
+- Use `pnpm run <script>` or `pnpm <script>` to run scripts
+- Use `pnpm exec` or `pnpx` instead of `npx`
+- headless-session-manager requires Node.js runtime (Playwright incompatible with Bun)
 
 ### Angular App (shop-ui)
 - Angular 21 with standalone components
@@ -303,3 +305,8 @@ if (executeResponse.status === 404) {
   - Session recovery (404 → recreate)
   - State propagation on session create/recover
 - Run `bun test` in mcp-tools before committing
+
+### Git Worktrees
+- Always place worktrees in the `.worktrees/` directory at the repository root
+- Use the branch name (with slashes replaced by dashes) as the worktree directory name
+- Example: `git worktree add .worktrees/claude-feature-branch claude/feature-branch`
