@@ -10,6 +10,8 @@
     "playwright:install": "playwright install chromium"
   },
   "dependencies": {
+    "@types/cors": "^2.8.19",
+    "cors": "^2.8.5",
     "express": "^4.21.0",
     "playwright": "^1.48.0",
     "uuid": "^10.0.0"

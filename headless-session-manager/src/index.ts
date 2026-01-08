@@ -1,4 +1,5 @@
 import express, { type Request, type Response } from 'express';
+import cors from 'cors';
 import { SessionManager } from './session-manager.js';
 import type { CreateSessionRequest, ExecuteCommandRequest } from './types.js';
 
@@ -6,6 +7,7 @@ const PORT = process.env['PORT'] ? parseInt(process.env['PORT']) : 3002;
 const sessionManager = new SessionManager();
 
 const app = express();
+app.use(cors());
 app.use(express.json());
 
 // Health check
@@ -56,6 +58,13 @@ app.post('/sessions/:id/execute', async (req: Request<{ id: string }>, res: Resp
   if (!action || !successTypes || !failureTypes) {
     res.status(400).json({
       error: 'action, successTypes, and failureTypes are required',
+    });
+    return;
+  }
+
+  if (typeof action.type !== 'string' || action.type.length === 0) {
+    res.status(400).json({
+      error: 'action.type must be a non-empty string',
     });
     return;
   }
