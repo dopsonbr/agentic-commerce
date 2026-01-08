@@ -2,14 +2,17 @@ FROM mcr.microsoft.com/playwright:v1.48.0-jammy
 
 WORKDIR /app
 
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
 # Copy package files
-COPY package*.json ./
+COPY package.json pnpm-lock.yaml ./
 
 # Install all dependencies (tsx needed for TypeScript execution)
-RUN npm ci
+RUN pnpm install --frozen-lockfile
 
 # Install Playwright browsers (chromium only to save space)
-RUN npx playwright install chromium
+RUN pnpm exec playwright install chromium
 
 # Copy source
 COPY . .
@@ -20,4 +23,4 @@ EXPOSE 3002
 # No healthcheck - Playwright startup is slow and session creation is on-demand
 
 # Run
-CMD ["npm", "run", "start"]
+CMD ["pnpm", "run", "start"]

@@ -3,11 +3,14 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
 # Copy package files
-COPY package*.json ./
+COPY package.json pnpm-lock.yaml ./
 
 # Install dependencies
-RUN npm ci
+RUN pnpm install --frozen-lockfile
 
 # Copy source
 COPY . .
@@ -17,7 +20,7 @@ ARG FARO_COLLECTOR_URL=http://localhost:12347/collect
 ENV FARO_COLLECTOR_URL=$FARO_COLLECTOR_URL
 
 # Build Angular app for production
-RUN npm run build
+RUN pnpm run build
 
 # Production stage
 FROM nginx:alpine
