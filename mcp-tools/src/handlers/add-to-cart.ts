@@ -82,8 +82,10 @@ export async function handleAddToCart(args: unknown, sessionId: string) {
   }
 
   // Extract cart ID from state if available
-  if (result.state?.cart?.id) {
-    context.cartId = result.state.cart.id;
+  // State shape: { cart: { cart: { id: string } } }
+  const cartState = result.state?.cart as { cart?: { id?: string } } | undefined;
+  if (cartState?.cart?.id) {
+    context.cartId = cartState.cart.id;
   }
 
   return addToCartOutput.parse({
