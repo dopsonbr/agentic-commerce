@@ -6,7 +6,7 @@
  */
 
 import { spawn, execSync } from 'node:child_process';
-import { existsSync, mkdirSync, writeFileSync, readdirSync, createWriteStream } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync, readFileSync, readdirSync, createWriteStream } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -111,17 +111,50 @@ function isPortInUse(port) {
 }
 
 /**
- * Check if node_modules exists and is not empty
+ * Check if dependencies are properly installed
+ * Verifies both node_modules exists AND lockfile is present
+ * If lockfile exists but node_modules is missing/incomplete, needs install
  */
-function hasDependencies(dir) {
-  const nodeModulesPath = join(__dirname, dir, 'node_modules');
+function hasDependencies(service) {
+  const serviceDir = join(__dirname, service.dir);
+  const nodeModulesPath = join(serviceDir, 'node_modules');
+
+  // Check if node_modules exists
   if (!existsSync(nodeModulesPath)) return false;
-  try {
-    const contents = readdirSync(nodeModulesPath);
-    return contents.length > 0;
-  } catch {
-    return false;
+
+  // Check for lockfile based on package manager
+  const lockfiles = {
+    bun: 'bun.lock',
+    pnpm: 'pnpm-lock.yaml',
+    npm: 'package-lock.json',
+  };
+  const lockfile = lockfiles[service.packageManager];
+  const lockfilePath = join(serviceDir, lockfile);
+
+  // If no lockfile, dependencies may not be installed properly
+  if (!existsSync(lockfilePath)) return false;
+
+  // For bun projects, verify a sample production dependency exists
+  // This catches cases where node_modules exists but deps weren't installed
+  if (service.packageManager === 'bun') {
+    // Read package.json to find a production dependency to verify
+    try {
+      const pkgPath = join(serviceDir, 'package.json');
+      const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
+      const deps = Object.keys(pkg.dependencies || {});
+      if (deps.length > 0) {
+        // Check if first dependency exists in node_modules
+        const firstDep = deps[0];
+        if (!existsSync(join(nodeModulesPath, firstDep))) {
+          return false;
+        }
+      }
+    } catch {
+      return false;
+    }
   }
+
+  return true;
 }
 
 /**
@@ -156,7 +189,7 @@ function ensureDependencies() {
   let allInstalled = true;
 
   for (const service of services) {
-    if (!hasDependencies(service.dir)) {
+    if (!hasDependencies(service)) {
       console.log(`  ${colors.yellow}Missing dependencies in ${service.name}${colors.reset}`);
       if (!installDependencies(service)) {
         allInstalled = false;
