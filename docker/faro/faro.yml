@@ -1,0 +1,55 @@
+server:
+  host: 0.0.0.0
+  port: 12347
+  api_key: ""
+
+  rate_limiting:
+    enabled: false
+
+  cors:
+    allowed_origins:
+      - "http://localhost:4200"
+      - "http://localhost:5173"
+      - "http://shop-ui"
+      - "http://chat-ui:5173"
+      - "*"
+    allowed_headers:
+      - "Content-Type"
+      - "x-faro-session-id"
+
+logs:
+  exporter:
+    loki:
+      url: http://loki:3100/loki/api/v1/push
+      labels:
+        app: "{{ .App.Name }}"
+        environment: "{{ .App.Environment }}"
+        kind: "{{ .Kind }}"
+
+traces:
+  exporter:
+    otlp:
+      endpoint: tempo:4317
+      insecure: true
+
+measurements:
+  exporter:
+    prometheus:
+      endpoint: http://prometheus:9090/api/v1/write
+
+exceptions:
+  exporter:
+    loki:
+      url: http://loki:3100/loki/api/v1/push
+      labels:
+        app: "{{ .App.Name }}"
+        kind: exception
+
+events:
+  exporter:
+    loki:
+      url: http://loki:3100/loki/api/v1/push
+      labels:
+        app: "{{ .App.Name }}"
+        kind: event
+        event_name: "{{ .Name }}"

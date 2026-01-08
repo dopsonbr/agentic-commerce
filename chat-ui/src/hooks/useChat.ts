@@ -2,6 +2,12 @@ import { useState, useCallback } from 'react';
 import type { ChatEvent, GetCartResult, SearchProductsResult, AddToCartResult, SetCustomerIdResult } from '../types/events';
 import { callTool } from '../services/mcp-client';
 import { useScriptedAgent } from './useScriptedAgent';
+import {
+  logUserMessage,
+  logPatternMatch,
+  logToolInvocation,
+  logToolResult,
+} from '../observability/faro';
 
 function generateId(): string {
   return Math.random().toString(36).substring(2, 11);
@@ -91,6 +97,9 @@ export function useChat() {
 
     setIsProcessing(true);
 
+    // Log user message to Faro
+    logUserMessage(content, sessionId);
+
     // Add user message
     const userEvent: ChatEvent = {
       type: 'user_message',
@@ -104,9 +113,16 @@ export function useChat() {
     const context = { lastProductSku, lastProductName, customerId };
     const decision = processMessage(content, context);
 
+    // Log pattern match result
+    logPatternMatch(content, decision.tool, sessionId);
+
     if (decision.tool) {
+      // Log tool invocation
+      logToolInvocation(decision.tool, decision.args, sessionId);
+
       // Execute tool
       const callId = generateId();
+      const startTime = Date.now();
 
       // Add tool call event
       const toolCallEvent: ChatEvent = {
@@ -121,6 +137,11 @@ export function useChat() {
 
       // Call the tool
       const result = await callTool(decision.tool, decision.args, sessionId);
+
+      const durationMs = Date.now() - startTime;
+
+      // Log tool result
+      logToolResult(decision.tool, result.success, durationMs, sessionId, result.error);
 
       // Add tool result event
       const toolResultEvent: ChatEvent = {
