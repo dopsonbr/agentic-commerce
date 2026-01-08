@@ -12,7 +12,7 @@ Each app has its own detailed, self-contained implementation plan with step-by-s
 |-----|------|--------|---------|
 | **shop-ui** | [`shop-ui/IMPLEMENTATION_PLAN.md`](./shop-ui/IMPLEMENTATION_PLAN.md) | ✅ Done | npm (Angular) |
 | **headless-session-manager** | [`headless-session-manager/IMPLEMENTATION_PLAN.md`](./headless-session-manager/IMPLEMENTATION_PLAN.md) | ✅ Done | Node.js (converted from Bun) |
-| **mcp-tools** | [`mcp-tools/IMPLEMENTATION_PLAN.md`](./mcp-tools/IMPLEMENTATION_PLAN.md) | Pending | Bun |
+| **mcp-tools** | [`mcp-tools/IMPLEMENTATION_PLAN.md`](./mcp-tools/IMPLEMENTATION_PLAN.md) | ✅ Done | Bun |
 | **chat-ui** | [`chat-ui/IMPLEMENTATION_PLAN.md`](./chat-ui/IMPLEMENTATION_PLAN.md) | Pending | Bun |
 | **shop-api** | N/A (already implemented) | ✅ Done | Bun |
 
@@ -77,7 +77,7 @@ Tool Contracts ──► shop-ui bridge ──► headless-session-manager ─�
      │                   │                      │                      │            │
      ▼                   ▼                      ▼                      ▼            ▼
   Phase 1            Phase 2               Phase 3                Phase 4      Phase 5
-                       ✅ DONE              ✅ DONE
+  (merged)           ✅ DONE              ✅ DONE                ✅ DONE
 ```
 
 ---
@@ -411,7 +411,9 @@ async function executeBridgeCommand(
 
 ---
 
-## Phase 4 — MCP Tools Server
+## Phase 4 — MCP Tools Server ✅ COMPLETE
+
+> **Completed:** 2026-01-08 | **See:** [`mcp-tools/IMPLEMENTATION_PLAN.md`](./mcp-tools/IMPLEMENTATION_PLAN.md)
 
 ### Goal
 Implement MCP-compliant tool server that routes to shop-api or headless-session-manager.

@@ -41,11 +41,13 @@ agentic-commerce/
 - **Status:** Scaffold only - needs implementation
 - **Purpose:** Chat interface with scripted agent mode
 
-### mcp-tools (Bun) - STUB
+### mcp-tools (Bun) - COMPLETE
 - **Port:** 3001
 - **Commands:** `bun run dev`
-- **Status:** Scaffold only - needs implementation
-- **Dependencies:** `@modelcontextprotocol/sdk`, `zod`
+- **Status:** ✅ Complete - MCP tool server implemented
+- **Dependencies:** `zod`
+- **Tools:** `search_products`, `get_product_details`, `get_cart`, `add_to_cart`, `set_customer_id`
+- **Endpoints:** `/health`, `/tools`, `/tools/:name/call`, `/sessions`
 
 ### headless-session-manager (Node.js + Playwright) - COMPLETE
 - **Port:** 3002
@@ -164,10 +166,10 @@ Pattern matching for deterministic tool invocation:
 | Phase | Description | Status |
 |-------|-------------|--------|
 | 0 | Local scaffold + repo layout | ✅ Complete |
-| 1 | Tool contracts + event model | Pending |
+| 1 | Tool contracts + event model | ✅ Complete (merged into Phase 4) |
 | 2 | shop-ui automation bridge | ✅ Complete |
 | 3 | Headless session manager | ✅ Complete |
-| 4 | MCP tools server | Pending |
+| 4 | MCP tools server | ✅ Complete |
 | 5 | Chat UI | Pending |
 | 6 | Integration + demo hardening | Pending |
 
@@ -179,7 +181,7 @@ Each app has its own detailed, self-contained implementation plan:
 |-----|---------------------|--------|
 | shop-ui | `shop-ui/IMPLEMENTATION_PLAN.md` | ✅ Complete |
 | headless-session-manager | `headless-session-manager/IMPLEMENTATION_PLAN.md` | ✅ Complete (converted to Node.js) |
-| mcp-tools | `mcp-tools/IMPLEMENTATION_PLAN.md` | Pending |
+| mcp-tools | `mcp-tools/IMPLEMENTATION_PLAN.md` | ✅ Complete |
 | chat-ui | `chat-ui/IMPLEMENTATION_PLAN.md` | Pending |
 
 See `IMPLEMENTATION_PLAN.md` for the overall roadmap, dependency graph, and architecture diagrams.
