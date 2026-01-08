@@ -11,12 +11,10 @@ Each app has its own detailed, self-contained implementation plan with step-by-s
 | App | Plan | Status | Runtime |
 |-----|------|--------|---------|
 | **shop-ui** | [`shop-ui/IMPLEMENTATION_PLAN.md`](./shop-ui/IMPLEMENTATION_PLAN.md) | ✅ Done | npm (Angular) |
-| **headless-session-manager** | [`headless-session-manager/IMPLEMENTATION_PLAN.md`](./headless-session-manager/IMPLEMENTATION_PLAN.md) | Pending | **Node.js** (requires conversion from Bun) |
+| **headless-session-manager** | [`headless-session-manager/IMPLEMENTATION_PLAN.md`](./headless-session-manager/IMPLEMENTATION_PLAN.md) | ✅ Done | Node.js (converted from Bun) |
 | **mcp-tools** | [`mcp-tools/IMPLEMENTATION_PLAN.md`](./mcp-tools/IMPLEMENTATION_PLAN.md) | Pending | Bun |
 | **chat-ui** | [`chat-ui/IMPLEMENTATION_PLAN.md`](./chat-ui/IMPLEMENTATION_PLAN.md) | Pending | Bun |
 | **shop-api** | N/A (already implemented) | ✅ Done | Bun |
-
-> ⚠️ **Critical Note:** The `headless-session-manager` must be converted from Bun to Node.js because Playwright is not compatible with Bun runtime. See its implementation plan for conversion steps.
 
 ---
 
@@ -79,7 +77,7 @@ Tool Contracts ──► shop-ui bridge ──► headless-session-manager ─�
      │                   │                      │                      │            │
      ▼                   ▼                      ▼                      ▼            ▼
   Phase 1            Phase 2               Phase 3                Phase 4      Phase 5
-                       ✅ DONE
+                       ✅ DONE              ✅ DONE
 ```
 
 ---

@@ -639,15 +639,24 @@ curl -X DELETE http://localhost:3002/sessions/test-123
 
 ## Acceptance Criteria
 
-- [ ] Project converted from Bun to Node.js
-- [ ] Playwright browsers launch successfully
-- [ ] Sessions are created with shop-ui loaded
-- [ ] Bridge is detected and ready
-- [ ] Commands execute via bridge
-- [ ] Commands are serialized per session
-- [ ] State snapshots are returned
-- [ ] Sessions are properly destroyed
-- [ ] Graceful shutdown closes all browsers
+- [x] Project converted from Bun to Node.js
+- [x] Playwright browsers launch successfully
+- [x] Sessions are created with shop-ui loaded
+- [x] Bridge is detected and ready
+- [x] Commands execute via bridge
+- [x] Commands are serialized per session
+- [x] State snapshots are returned
+- [x] Sessions are properly destroyed
+- [x] Graceful shutdown closes all browsers
+
+### Additional Enhancements (from code review)
+
+- [x] CORS support for cross-origin requests from mcp-tools
+- [x] Browser resource cleanup on createSession failure
+- [x] Race condition prevention with pendingCreations mutex
+- [x] `waitUntil: 'networkidle'` for reliable page loading
+- [x] `action.type` validation in execute endpoint
+- [x] Stale session cleanup (30min idle timeout, 5min check interval)
 
 ---
 

@@ -47,12 +47,13 @@ agentic-commerce/
 - **Status:** Scaffold only - needs implementation
 - **Dependencies:** `@modelcontextprotocol/sdk`, `zod`
 
-### headless-session-manager (Node.js + Playwright) - STUB
+### headless-session-manager (Node.js + Playwright) - COMPLETE
 - **Port:** 3002
 - **Commands:** `npm run dev`
-- **Status:** Scaffold only - needs implementation
+- **Status:** ✅ Complete - session manager with Playwright
 - **Runtime:** Node.js (Playwright incompatible with Bun)
-- **Dependencies:** `playwright`, `express`
+- **Dependencies:** `playwright`, `express`, `cors`
+- **Endpoints:** `/health`, `/sessions`, `/sessions/:id/execute`, `/sessions/:id/state`
 
 ## Local Development
 
@@ -165,7 +166,7 @@ Pattern matching for deterministic tool invocation:
 | 0 | Local scaffold + repo layout | ✅ Complete |
 | 1 | Tool contracts + event model | Pending |
 | 2 | shop-ui automation bridge | ✅ Complete |
-| 3 | Headless session manager | Pending |
+| 3 | Headless session manager | ✅ Complete |
 | 4 | MCP tools server | Pending |
 | 5 | Chat UI | Pending |
 | 6 | Integration + demo hardening | Pending |
@@ -174,13 +175,73 @@ Pattern matching for deterministic tool invocation:
 
 Each app has its own detailed, self-contained implementation plan:
 
-| App | Implementation Plan | Key Notes |
-|-----|---------------------|-----------|
-| shop-ui | `shop-ui/IMPLEMENTATION_PLAN.md` | Add `window.__agentBridge` automation bridge |
-| headless-session-manager | `headless-session-manager/IMPLEMENTATION_PLAN.md` | **Must convert from Bun to Node.js** (Playwright incompatibility) |
-| mcp-tools | `mcp-tools/IMPLEMENTATION_PLAN.md` | MCP tool server with Zod schemas |
-| chat-ui | `chat-ui/IMPLEMENTATION_PLAN.md` | Scripted agent mode, React components |
-
-> ⚠️ **Critical:** Before implementing `headless-session-manager`, you must convert it from Bun to Node.js. See its IMPLEMENTATION_PLAN.md for conversion steps.
+| App | Implementation Plan | Status |
+|-----|---------------------|--------|
+| shop-ui | `shop-ui/IMPLEMENTATION_PLAN.md` | ✅ Complete |
+| headless-session-manager | `headless-session-manager/IMPLEMENTATION_PLAN.md` | ✅ Complete (converted to Node.js) |
+| mcp-tools | `mcp-tools/IMPLEMENTATION_PLAN.md` | Pending |
+| chat-ui | `chat-ui/IMPLEMENTATION_PLAN.md` | Pending |
 
 See `IMPLEMENTATION_PLAN.md` for the overall roadmap, dependency graph, and architecture diagrams.
+
+---
+
+## Development Patterns (from Retros)
+
+### Cross-Service Communication
+- All Express servers must include `cors` middleware for cross-origin requests
+- Services communicate across different ports (mcp-tools:3001 → headless-session-manager:3002)
+- Always add CORS when implementing new Express servers in this project
+
+```typescript
+import cors from 'cors';
+app.use(cors());
+```
+
+### Resource Management
+- Browser sessions and other resources must be cleaned up on failure
+- Use try/catch/finally pattern for resource lifecycle:
+
+```typescript
+let browser: Browser | null = null;
+try {
+  browser = await chromium.launch();
+  // use browser
+} catch (error) {
+  if (browser) await browser.close();
+  throw error;
+} finally {
+  // cleanup pending state
+}
+```
+
+- Implement idle timeouts for long-running resources (default: 30min)
+- Use cleanup intervals to prevent memory leaks
+
+### Concurrent Operation Guards
+- For operations that shouldn't run concurrently for the same ID:
+
+```typescript
+private pending = new Set<string>();
+
+async createSession(id: string) {
+  if (this.pending.has(id)) {
+    // Wait or throw
+  }
+  this.pending.add(id);
+  try {
+    // operation
+  } finally {
+    this.pending.delete(id);
+  }
+}
+```
+
+### Playwright Best Practices
+- Always use `waitUntil: 'networkidle'` with `page.goto()` for SPAs
+- Wait for bridge/app readiness before interacting:
+
+```typescript
+await page.goto(url, { waitUntil: 'networkidle' });
+await page.waitForFunction(() => window.__agentBridge?.isReady());
+```
