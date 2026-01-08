@@ -1,7 +1,11 @@
+// Initialize tracing FIRST - before any other imports
+import { tracer, extractContext, createHttpSpan, createToolSpan, context } from './observability/tracing.js';
+import { SpanStatusCode } from '@opentelemetry/api';
+
 import { tools, getTool, listTools } from './tool-registry.js';
 import { sessionStore } from './session-context.js';
 import type { ToolCallRequest } from './types.js';
-import { createLogger, extractTraceContext, generateTraceContext } from './observability/logger.js';
+import { createLogger } from './observability/logger.js';
 import { createHistogram, createCounter, getMetricsOutput } from './observability/metrics.js';
 
 const logger = createLogger('mcp-tools');
@@ -48,10 +52,6 @@ Bun.serve({
     const url = new URL(req.url);
     const method = req.method;
 
-    // Extract or generate trace context
-    const { traceId: existingTraceId } = extractTraceContext(req.headers);
-    const trace = generateTraceContext(existingTraceId);
-
     // CORS headers
     const headers = {
       'Access-Control-Allow-Origin': '*',
@@ -65,11 +65,25 @@ Bun.serve({
       return new Response(null, { headers });
     }
 
+    // Extract trace context from incoming request headers
+    const parentContext = extractContext(req.headers);
+
+    // Create a span for this request
+    const span = createHttpSpan(
+      `${method} ${url.pathname}`,
+      method,
+      url.pathname,
+      parentContext
+    );
+
+    const traceId = span.spanContext().traceId;
+    const spanId = span.spanContext().spanId;
+
     const logResponse = (status: number) => {
       const duration = (Date.now() - startTime) / 1000;
       logger.info('Request completed', {
-        traceId: trace.traceId,
-        spanId: trace.spanId,
+        traceId,
+        spanId,
         method,
         path: url.pathname,
         status: status.toString(),
@@ -80,8 +94,8 @@ Bun.serve({
     };
 
     logger.info('Incoming request', {
-      traceId: trace.traceId,
-      spanId: trace.spanId,
+      traceId,
+      spanId,
       method,
       path: url.pathname,
     });
@@ -89,12 +103,18 @@ Bun.serve({
     try {
       // Health check
       if (url.pathname === '/health' && method === 'GET') {
+        span.setAttribute('http.status_code', 200);
+        span.setStatus({ code: SpanStatusCode.OK });
+        span.end();
         logResponse(200);
         return Response.json({ status: 'ok', tools: tools.length }, { headers });
       }
 
       // Metrics endpoint
       if (url.pathname === '/metrics' && method === 'GET') {
+        span.setAttribute('http.status_code', 200);
+        span.setStatus({ code: SpanStatusCode.OK });
+        span.end();
         return new Response(getMetricsOutput(), {
           headers: { 'Content-Type': 'text/plain' },
         });
@@ -102,6 +122,9 @@ Bun.serve({
 
       // List tools
       if (url.pathname === '/tools' && method === 'GET') {
+        span.setAttribute('http.status_code', 200);
+        span.setStatus({ code: SpanStatusCode.OK });
+        span.end();
         logResponse(200);
         return Response.json(listTools(), { headers });
       }
@@ -113,6 +136,9 @@ Bun.serve({
         const tool = getTool(toolName);
 
         if (!tool) {
+          span.setAttribute('http.status_code', 404);
+          span.setStatus({ code: SpanStatusCode.ERROR, message: `Unknown tool: ${toolName}` });
+          span.end();
           logResponse(404);
           return Response.json(
             { success: false, error: `Unknown tool: ${toolName}` },
@@ -122,15 +148,22 @@ Bun.serve({
 
         const parsed = await safeJsonParse<ToolCallRequest>(req);
         if ('error' in parsed) {
+          span.setAttribute('http.status_code', 400);
+          span.setStatus({ code: SpanStatusCode.ERROR, message: parsed.error });
+          span.end();
           logResponse(400);
           return Response.json({ success: false, error: parsed.error }, { status: 400, headers });
         }
         const body = parsed.data;
         const sessionId = body.sessionId || 'default';
 
+        // Create a child span for the tool invocation
+        const toolSpan = createToolSpan(toolName, sessionId);
+        toolSpan.setAttribute('tool.args', JSON.stringify(body.args));
+
         logger.info('Tool invocation started', {
-          traceId: trace.traceId,
-          spanId: trace.spanId,
+          traceId,
+          spanId,
           tool: toolName,
           sessionId,
           args: JSON.stringify(body.args),
@@ -142,9 +175,12 @@ Bun.serve({
           const result = await tool.handler(body.args, sessionId);
           const toolDuration = (Date.now() - toolStartTime) / 1000;
 
+          toolSpan.setStatus({ code: SpanStatusCode.OK });
+          toolSpan.end();
+
           logger.info('Tool invocation completed', {
-            traceId: trace.traceId,
-            spanId: trace.spanId,
+            traceId,
+            spanId,
             tool: toolName,
             sessionId,
             success: 'true',
@@ -154,6 +190,9 @@ Bun.serve({
           toolInvocationDuration.observe(toolDuration, { tool: toolName, success: 'true' });
           toolInvocationsTotal.inc({ tool: toolName, success: 'true' });
 
+          span.setAttribute('http.status_code', 200);
+          span.setStatus({ code: SpanStatusCode.OK });
+          span.end();
           logResponse(200);
           return Response.json({ success: true, result }, { headers });
         } catch (error) {
@@ -161,9 +200,13 @@ Bun.serve({
           const message = error instanceof Error ? error.message : 'Tool execution failed';
           const stack = error instanceof Error ? error.stack : undefined;
 
+          toolSpan.setStatus({ code: SpanStatusCode.ERROR, message });
+          toolSpan.recordException(error instanceof Error ? error : new Error(message));
+          toolSpan.end();
+
           logger.error('Tool invocation failed', {
-            traceId: trace.traceId,
-            spanId: trace.spanId,
+            traceId,
+            spanId,
             tool: toolName,
             sessionId,
             error: message,
@@ -174,6 +217,9 @@ Bun.serve({
           toolInvocationDuration.observe(toolDuration, { tool: toolName, success: 'false' });
           toolInvocationsTotal.inc({ tool: toolName, success: 'false' });
 
+          span.setAttribute('http.status_code', 400);
+          span.setStatus({ code: SpanStatusCode.ERROR, message });
+          span.end();
           logResponse(400);
           return Response.json({ success: false, error: message }, { status: 400, headers });
         }
@@ -183,19 +229,29 @@ Bun.serve({
       if (url.pathname === '/sessions' && method === 'POST') {
         const parsed = await safeJsonParse<{ sessionId: string }>(req);
         if ('error' in parsed) {
+          span.setAttribute('http.status_code', 400);
+          span.setStatus({ code: SpanStatusCode.ERROR, message: parsed.error });
+          span.end();
           logResponse(400);
           return Response.json({ error: parsed.error }, { status: 400, headers });
         }
         const body = parsed.data;
         if (!body.sessionId) {
+          span.setAttribute('http.status_code', 400);
+          span.setStatus({ code: SpanStatusCode.ERROR, message: 'sessionId is required' });
+          span.end();
           logResponse(400);
           return Response.json({ error: 'sessionId is required' }, { status: 400, headers });
         }
         sessionStore.getOrCreate(body.sessionId);
         logger.info('Session created', {
-          traceId: trace.traceId,
+          traceId,
           sessionId: body.sessionId,
         });
+        span.setAttribute('http.status_code', 201);
+        span.setAttribute('session.id', body.sessionId);
+        span.setStatus({ code: SpanStatusCode.OK });
+        span.end();
         logResponse(201);
         return Response.json({ sessionId: body.sessionId, status: 'created' }, { status: 201, headers });
       }
@@ -207,17 +263,27 @@ Bun.serve({
         const deleted = await sessionStore.deleteWithCleanup(sessionId);
         if (deleted) {
           logger.info('Session deleted', {
-            traceId: trace.traceId,
+            traceId,
             sessionId,
           });
+          span.setAttribute('http.status_code', 200);
+          span.setAttribute('session.id', sessionId);
+          span.setStatus({ code: SpanStatusCode.OK });
+          span.end();
           logResponse(200);
           return Response.json({ sessionId, status: 'deleted' }, { headers });
         }
+        span.setAttribute('http.status_code', 404);
+        span.setStatus({ code: SpanStatusCode.ERROR, message: 'Session not found' });
+        span.end();
         logResponse(404);
         return Response.json({ sessionId, status: 'not_found' }, { status: 404, headers });
       }
 
       // 404
+      span.setAttribute('http.status_code', 404);
+      span.setStatus({ code: SpanStatusCode.ERROR, message: 'Not found' });
+      span.end();
       logResponse(404);
       return Response.json({ error: 'Not found' }, { status: 404, headers });
 
@@ -225,13 +291,17 @@ Bun.serve({
       const message = error instanceof Error ? error.message : 'Internal error';
       const stack = error instanceof Error ? error.stack : undefined;
       logger.error('Request failed', {
-        traceId: trace.traceId,
-        spanId: trace.spanId,
+        traceId,
+        spanId,
         method,
         path: url.pathname,
         error: message,
         stack,
       });
+      span.setAttribute('http.status_code', 500);
+      span.setStatus({ code: SpanStatusCode.ERROR, message });
+      span.recordException(error instanceof Error ? error : new Error(message));
+      span.end();
       logResponse(500);
       return Response.json({ error: message }, { status: 500, headers });
     }

@@ -14,22 +14,27 @@
         "uid": "tempo"
       },
       "gridPos": {
-        "h": 4,
+        "h": 6,
         "w": 24,
         "x": 0,
         "y": 0
       },
       "id": 1,
       "options": {
-        "query": "",
-        "serviceMap": {
-          "primaryStat": "request_rate",
-          "responseTimeMethod": "percentile",
-          "showRate": true,
-          "showResponseTime": true
-        }
+        "nodes": {},
+        "edges": {}
       },
       "pluginVersion": "11.3.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "queryType": "serviceMap",
+          "refId": "A"
+        }
+      ],
       "title": "Service Map",
       "type": "nodeGraph"
     },
@@ -64,7 +69,7 @@
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 4
+        "y": 6
       },
       "id": 2,
       "options": {
@@ -102,13 +107,13 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 14
+        "y": 16
       },
       "id": 3,
       "options": {
         "dedupStrategy": "none",
         "enableLogDetails": true,
-        "prettifyLogMessage": false,
+        "prettifyLogMessage": true,
         "showCommonLabels": false,
         "showLabels": true,
         "showTime": true,
@@ -118,7 +123,7 @@
       "pluginVersion": "11.3.0",
       "targets": [
         {
-          "expr": "{app=\"chat-ui\", kind=\"event\", event_name=\"user_message\"}",
+          "expr": "{source=\"faro\"} |~ \"(?i)(user|message|chat)\"",
           "refId": "A"
         }
       ],
@@ -134,13 +139,13 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 14
+        "y": 16
       },
       "id": 4,
       "options": {
         "dedupStrategy": "none",
         "enableLogDetails": true,
-        "prettifyLogMessage": false,
+        "prettifyLogMessage": true,
         "showCommonLabels": false,
         "showLabels": true,
         "showTime": true,
@@ -150,7 +155,7 @@
       "pluginVersion": "11.3.0",
       "targets": [
         {
-          "expr": "{app=\"chat-ui\", kind=\"event\", event_name=\"tool_invocation\"}",
+          "expr": "{source=\"faro\"} |~ \"(?i)(tool|search_products|add_to_cart|get_product)\"",
           "refId": "A"
         }
       ],
@@ -166,13 +171,13 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 22
+        "y": 24
       },
       "id": 5,
       "options": {
         "dedupStrategy": "none",
         "enableLogDetails": true,
-        "prettifyLogMessage": false,
+        "prettifyLogMessage": true,
         "showCommonLabels": false,
         "showLabels": true,
         "showTime": true,
@@ -182,7 +187,7 @@
       "pluginVersion": "11.3.0",
       "targets": [
         {
-          "expr": "{app=\"chat-ui\", kind=\"event\", event_name=\"tool_result\"}",
+          "expr": "{source=\"faro\"} |~ \"(?i)(result|success|response|complete)\"",
           "refId": "A"
         }
       ],
@@ -198,13 +203,13 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 22
+        "y": 24
       },
       "id": 6,
       "options": {
         "dedupStrategy": "none",
         "enableLogDetails": true,
-        "prettifyLogMessage": false,
+        "prettifyLogMessage": true,
         "showCommonLabels": false,
         "showLabels": true,
         "showTime": true,
@@ -214,11 +219,11 @@
       "pluginVersion": "11.3.0",
       "targets": [
         {
-          "expr": "{kind=\"exception\"}",
+          "expr": "{source=\"faro\"} |~ \"(?i)(error|exception|failure|failed)\"",
           "refId": "A"
         }
       ],
-      "title": "Exceptions",
+      "title": "Exceptions & Errors",
       "type": "logs"
     }
   ],
@@ -229,7 +234,7 @@
     "list": []
   },
   "time": {
-    "from": "now-15m",
+    "from": "now-1h",
     "to": "now"
   },
   "timepicker": {},

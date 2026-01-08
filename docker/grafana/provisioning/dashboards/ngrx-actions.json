@@ -23,7 +23,7 @@
       "options": {
         "dedupStrategy": "none",
         "enableLogDetails": true,
-        "prettifyLogMessage": false,
+        "prettifyLogMessage": true,
         "showCommonLabels": false,
         "showLabels": true,
         "showTime": true,
@@ -33,11 +33,43 @@
       "pluginVersion": "11.3.0",
       "targets": [
         {
-          "expr": "{app=\"shop-ui\", kind=\"event\", event_name=\"ngrx_action\"}",
+          "expr": "{source=\"faro\"} |= \"ngrx_action\"",
           "refId": "A"
         }
       ],
       "title": "NgRx Action Stream",
+      "type": "logs"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 24,
+        "x": 0,
+        "y": 12
+      },
+      "id": 5,
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "prettifyLogMessage": true,
+        "showCommonLabels": false,
+        "showLabels": true,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": false
+      },
+      "pluginVersion": "11.3.0",
+      "targets": [
+        {
+          "expr": "{source=\"faro\"}",
+          "refId": "A"
+        }
+      ],
+      "title": "All Faro Events",
       "type": "logs"
     },
     {
@@ -65,7 +97,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 12
+        "y": 24
       },
       "id": 2,
       "options": {
@@ -89,12 +121,12 @@
       "pluginVersion": "11.3.0",
       "targets": [
         {
-          "expr": "sum by (action_type) (count_over_time({app=\"shop-ui\", event_name=\"ngrx_action\"} | json | __error__=\"\" [1h]))",
-          "legendFormat": "{{action_type}}",
+          "expr": "sum by (kind) (count_over_time({source=\"faro\"} | json | __error__=\"\" [$__range]))",
+          "legendFormat": "{{kind}}",
           "refId": "A"
         }
       ],
-      "title": "Action Frequency",
+      "title": "Events by Kind",
       "type": "piechart"
     },
     {
@@ -106,13 +138,13 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 12
+        "y": 24
       },
       "id": 3,
       "options": {
         "dedupStrategy": "none",
         "enableLogDetails": true,
-        "prettifyLogMessage": false,
+        "prettifyLogMessage": true,
         "showCommonLabels": false,
         "showLabels": true,
         "showTime": true,
@@ -122,11 +154,11 @@
       "pluginVersion": "11.3.0",
       "targets": [
         {
-          "expr": "{app=\"shop-ui\", kind=\"event\", event_name=\"ngrx_action\"} |= \"Failure\"",
+          "expr": "{source=\"faro\"} |~ \"(?i)(failure|error)\"",
           "refId": "A"
         }
       ],
-      "title": "Action Failures",
+      "title": "Errors & Failures",
       "type": "logs"
     },
     {
@@ -138,13 +170,13 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 20
+        "y": 32
       },
       "id": 4,
       "options": {
         "dedupStrategy": "none",
         "enableLogDetails": true,
-        "prettifyLogMessage": false,
+        "prettifyLogMessage": true,
         "showCommonLabels": false,
         "showLabels": true,
         "showTime": true,
@@ -154,7 +186,7 @@
       "pluginVersion": "11.3.0",
       "targets": [
         {
-          "expr": "{app=\"shop-ui\", kind=\"event\", event_name=\"ngrx_action\"} |= \"Cart\"",
+          "expr": "{source=\"faro\"} |= \"Cart\"",
           "refId": "A"
         }
       ],
@@ -169,7 +201,7 @@
     "list": []
   },
   "time": {
-    "from": "now-15m",
+    "from": "now-1h",
     "to": "now"
   },
   "timepicker": {},

@@ -28,20 +28,42 @@ faro.receiver "default" {
   }
 }
 
+// Process Faro logs to extract labels from the log line
 loki.process "faro" {
   forward_to = [loki.write.default.receiver]
 
-  stage.json {
-    expressions = {
-      level = "level",
-      kind  = "kind",
+  // Add static label for source
+  stage.static_labels {
+    values = {
+      source = "faro",
     }
   }
 
+  // Extract top-level fields
+  stage.json {
+    expressions = {
+      kind       = "kind",
+      level      = "level",
+      event_name = "name",
+      app        = "app",
+    }
+  }
+
+  // Extract nested app.name
+  stage.json {
+    source      = "app"
+    expressions = {
+      app_name = "name",
+    }
+  }
+
+  // Add labels from extracted values
   stage.labels {
     values = {
-      level = "",
-      kind  = "",
+      kind       = "",
+      level      = "",
+      app        = "app_name",
+      event_name = "",
     }
   }
 }
@@ -90,7 +112,7 @@ loki.write "default" {
   }
 }
 
-// ============ Logging for debugging ============
+// ============ Logging ============
 logging {
   level  = "info"
   format = "logfmt"
