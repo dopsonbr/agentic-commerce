@@ -5,6 +5,13 @@ import { corsHeaders } from "./src/cors.ts";
 const server = Bun.serve({
   port: 3000,
   routes: {
+    "/health": {
+      GET: () => Response.json({
+        status: "ok",
+        service: "shop-api",
+        timestamp: new Date().toISOString()
+      }, { headers: corsHeaders }),
+    },
     ...productRoutes,
     ...cartRoutes,
   },
