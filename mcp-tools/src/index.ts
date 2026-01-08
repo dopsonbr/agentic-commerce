@@ -26,6 +26,16 @@ const toolInvocationsTotal = createCounter(
 
 const PORT = process.env['PORT'] ? parseInt(process.env['PORT']) : 3001;
 
+// Helper to safely parse JSON body
+async function safeJsonParse<T>(req: Request): Promise<{ data: T } | { error: string }> {
+  try {
+    const data = await req.json() as T;
+    return { data };
+  } catch {
+    return { error: 'Invalid JSON body' };
+  }
+}
+
 Bun.serve({
   port: PORT,
 
@@ -106,7 +116,12 @@ Bun.serve({
           );
         }
 
-        const body = await req.json() as ToolCallRequest;
+        const parsed = await safeJsonParse<ToolCallRequest>(req);
+        if ('error' in parsed) {
+          logResponse(400);
+          return Response.json({ success: false, error: parsed.error }, { status: 400, headers });
+        }
+        const body = parsed.data;
         const sessionId = body.sessionId || 'default';
 
         logger.info('Tool invocation started', {
@@ -140,6 +155,7 @@ Bun.serve({
         } catch (error) {
           const toolDuration = (Date.now() - toolStartTime) / 1000;
           const message = error instanceof Error ? error.message : 'Tool execution failed';
+          const stack = error instanceof Error ? error.stack : undefined;
 
           logger.error('Tool invocation failed', {
             traceId: trace.traceId,
@@ -147,6 +163,7 @@ Bun.serve({
             tool: toolName,
             sessionId,
             error: message,
+            stack,
             duration_ms: (toolDuration * 1000).toFixed(2),
           });
 
@@ -160,7 +177,16 @@ Bun.serve({
 
       // Create session
       if (url.pathname === '/sessions' && method === 'POST') {
-        const body = await req.json() as { sessionId: string };
+        const parsed = await safeJsonParse<{ sessionId: string }>(req);
+        if ('error' in parsed) {
+          logResponse(400);
+          return Response.json({ error: parsed.error }, { status: 400, headers });
+        }
+        const body = parsed.data;
+        if (!body.sessionId) {
+          logResponse(400);
+          return Response.json({ error: 'sessionId is required' }, { status: 400, headers });
+        }
         sessionStore.getOrCreate(body.sessionId);
         logger.info('Session created', {
           traceId: trace.traceId,
@@ -193,12 +219,14 @@ Bun.serve({
 
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Internal error';
+      const stack = error instanceof Error ? error.stack : undefined;
       logger.error('Request failed', {
         traceId: trace.traceId,
         spanId: trace.spanId,
         method,
         path: url.pathname,
         error: message,
+        stack,
       });
       logResponse(500);
       return Response.json({ error: message }, { status: 500, headers });

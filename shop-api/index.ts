@@ -58,12 +58,16 @@ function instrumentRoute(handler: (req: Request) => Response | Promise<Response>
       return response;
     } catch (error) {
       const duration = (Date.now() - startTime) / 1000;
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorStack = error instanceof Error ? error.stack : undefined;
+
       logger.error('Request failed', {
         traceId: trace.traceId,
         spanId: trace.spanId,
         method: req.method,
         path: url.pathname,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: errorMessage,
+        stack: errorStack,
       });
 
       httpRequestDuration.observe(duration, {
@@ -77,7 +81,14 @@ function instrumentRoute(handler: (req: Request) => Response | Promise<Response>
         status: '500',
       });
 
-      throw error;
+      // Return 500 response instead of re-throwing
+      return new Response(
+        JSON.stringify({ error: errorMessage }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        }
+      );
     }
   };
 }

@@ -115,10 +115,15 @@ app.get('/metrics', (_req: Request, res: Response) => {
   res.send(getMetricsOutput());
 });
 
+// Helper to safely get trace context
+function getTraceContext(req: Request) {
+  return req.traceContext || { traceId: 'unknown', spanId: 'unknown', traceparent: '' };
+}
+
 // Create session
 app.post('/sessions', async (req: Request, res: Response) => {
   const { sessionId } = req.body as CreateSessionRequest;
-  const trace = req.traceContext!;
+  const trace = getTraceContext(req);
 
   if (!sessionId) {
     res.status(400).json({ error: 'sessionId is required' });
@@ -150,10 +155,12 @@ app.post('/sessions', async (req: Request, res: Response) => {
     sessionCreationDuration.observe(duration, { status: 'error' });
 
     const message = error instanceof Error ? error.message : 'Failed to create session';
+    const stack = error instanceof Error ? error.stack : undefined;
     logger.error('Session creation failed', {
       traceId: trace.traceId,
       sessionId,
       error: message,
+      stack,
       duration_ms: (duration * 1000).toFixed(2),
     });
     res.status(500).json({ error: message });
@@ -163,7 +170,7 @@ app.post('/sessions', async (req: Request, res: Response) => {
 // Destroy session
 app.delete('/sessions/:id', async (req: Request<{ id: string }>, res: Response) => {
   const { id } = req.params;
-  const trace = req.traceContext!;
+  const trace = getTraceContext(req);
 
   const destroyed = await sessionManager.destroySession(id);
   if (destroyed) {
@@ -185,7 +192,7 @@ app.delete('/sessions/:id', async (req: Request<{ id: string }>, res: Response) 
 app.post('/sessions/:id/execute', async (req: Request<{ id: string }>, res: Response) => {
   const { id } = req.params;
   const { action, successTypes, failureTypes, timeout } = req.body as ExecuteCommandRequest;
-  const trace = req.traceContext!;
+  const trace = getTraceContext(req);
 
   if (!action || !successTypes || !failureTypes) {
     res.status(400).json({
@@ -250,11 +257,13 @@ app.post('/sessions/:id/execute', async (req: Request<{ id: string }>, res: Resp
     });
 
     const message = error instanceof Error ? error.message : 'Execution failed';
+    const stack = error instanceof Error ? error.stack : undefined;
     logger.error('Bridge command failed', {
       traceId: trace.traceId,
       sessionId: id,
       action: action.type,
       error: message,
+      stack,
       duration_ms: (duration * 1000).toFixed(2),
     });
     res.status(500).json({ success: false, error: message });
@@ -264,7 +273,7 @@ app.post('/sessions/:id/execute', async (req: Request<{ id: string }>, res: Resp
 // Get state
 app.get('/sessions/:id/state', async (req: Request<{ id: string }>, res: Response) => {
   const { id } = req.params;
-  const trace = req.traceContext!;
+  const trace = getTraceContext(req);
 
   const state = await sessionManager.getState(id);
   if (state === null) {
@@ -281,6 +290,24 @@ app.get('/sessions/:id/state', async (req: Request<{ id: string }>, res: Respons
     sessionId: id,
   });
   res.json(state);
+});
+
+// Global error handler middleware (must be last)
+app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
+  const trace = getTraceContext(req);
+  const message = err.message || 'Internal server error';
+  const stack = err.stack;
+
+  logger.error('Unhandled error', {
+    traceId: trace.traceId,
+    spanId: trace.spanId,
+    method: req.method,
+    path: req.path,
+    error: message,
+    stack,
+  });
+
+  res.status(500).json({ error: message });
 });
 
 // Graceful shutdown

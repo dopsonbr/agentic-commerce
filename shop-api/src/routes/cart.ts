@@ -8,11 +8,22 @@ import {
 } from "../store/cart-store.ts";
 import { json } from "../cors.ts";
 
+// Helper to safely parse JSON body
+async function parseJsonBody<T>(req: Request): Promise<{ data: T } | { error: Response }> {
+  try {
+    const data = await req.json() as T;
+    return { data };
+  } catch {
+    return { error: json({ error: "Invalid JSON body" }, { status: 400 }) };
+  }
+}
+
 export const cartRoutes = {
   "/api/cart": {
     POST: async (req: Request) => {
-      const body = await req.json();
-      const { customerId } = body;
+      const parsed = await parseJsonBody<{ customerId?: string }>(req);
+      if ('error' in parsed) return parsed.error;
+      const { customerId } = parsed.data;
 
       if (!customerId) {
         return json({ error: "customerId is required" }, { status: 400 });
@@ -45,8 +56,9 @@ export const cartRoutes = {
         return json({ error: "Cart not found" }, { status: 404 });
       }
 
-      const body = await req.json();
-      const { sku, quantity } = body;
+      const parsed = await parseJsonBody<{ sku?: string; quantity?: number }>(req);
+      if ('error' in parsed) return parsed.error;
+      const { sku, quantity } = parsed.data;
 
       if (!sku || typeof quantity !== "number" || quantity <= 0) {
         return json(
@@ -66,8 +78,9 @@ export const cartRoutes = {
         return json({ error: "Cart not found" }, { status: 404 });
       }
 
-      const body = await req.json();
-      const { quantity } = body;
+      const parsed = await parseJsonBody<{ quantity?: number }>(req);
+      if ('error' in parsed) return parsed.error;
+      const { quantity } = parsed.data;
 
       if (typeof quantity !== "number") {
         return json({ error: "quantity is required" }, { status: 400 });
