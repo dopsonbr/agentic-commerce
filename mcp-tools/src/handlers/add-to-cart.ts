@@ -13,6 +13,10 @@ export async function handleAddToCart(args: unknown, sessionId: string) {
   if (!context.headlessSessionId) {
     context.headlessSessionId = sessionId;
     await createHeadlessSession(sessionId);
+    // Propagate customer ID to new headless session if set
+    if (context.customerId) {
+      await setCustomerIdInHeadless(sessionId, context.customerId);
+    }
   }
 
   // First, get product details for the response
@@ -44,6 +48,10 @@ export async function handleAddToCart(args: unknown, sessionId: string) {
   // If session not found (404), try to recreate it once
   if (executeResponse.status === 404) {
     await createHeadlessSession(context.headlessSessionId);
+    // Propagate customer ID to recreated headless session if set
+    if (context.customerId) {
+      await setCustomerIdInHeadless(context.headlessSessionId, context.customerId);
+    }
     executeResponse = await fetch(
       `${HEADLESS_URL}/sessions/${context.headlessSessionId}/execute`,
       {
@@ -100,5 +108,38 @@ async function createHeadlessSession(sessionId: string): Promise<void> {
   if (!response.ok && response.status !== 409) {
     // 409 = already exists, which is fine
     throw new Error(`Failed to create headless session: ${response.status}`);
+  }
+}
+
+/**
+ * Set customer ID in the headless session's NgRx store.
+ * This ensures cart creation uses the correct customer ID.
+ */
+async function setCustomerIdInHeadless(headlessSessionId: string, customerId: string): Promise<void> {
+  try {
+    const response = await fetch(
+      `${HEADLESS_URL}/sessions/${headlessSessionId}/execute`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: {
+            type: '[Cart] Set Customer ID',
+            customerId,
+          },
+          // Synchronous action - success type is the same as trigger
+          successTypes: ['[Cart] Set Customer ID'],
+          failureTypes: [],
+          timeout: 5000,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      console.warn(`[add_to_cart] Failed to set customer ID in headless: ${response.status}`);
+    }
+  } catch (error) {
+    // Log but don't fail - cart will be created with 'guest' as fallback
+    console.warn('[add_to_cart] Failed to set customer ID in headless:', error);
   }
 }
