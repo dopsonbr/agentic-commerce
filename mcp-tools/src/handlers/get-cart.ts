@@ -19,10 +19,13 @@ export async function handleGetCart(args: unknown, sessionId: string) {
     });
   }
 
-  const url = new URL(`/api/cart/${context.cartId}`, SHOP_API_URL);
-  if (context.customerId) {
-    url.searchParams.set('customerId', context.customerId);
+  // customerId is required by shop-api
+  if (!context.customerId) {
+    throw new Error('Customer ID not set. Please call set_customer_id first.');
   }
+
+  const url = new URL(`/api/cart/${context.cartId}`, SHOP_API_URL);
+  url.searchParams.set('customerId', context.customerId);
 
   const response = await fetch(url.toString());
   if (!response.ok) {

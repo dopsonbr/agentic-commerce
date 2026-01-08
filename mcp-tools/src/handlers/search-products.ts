@@ -18,11 +18,11 @@ export async function handleSearchProducts(args: unknown, _sessionId: string) {
   const products = await response.json();
   const productArray = Array.isArray(products) ? products : [];
 
-  // Apply limit
+  // Apply limit but report actual total matches
   const limited = productArray.slice(0, input.limit);
 
   return searchProductsOutput.parse({
     products: limited,
-    total: limited.length,
+    total: productArray.length, // Total matches, not limited count
   });
 }

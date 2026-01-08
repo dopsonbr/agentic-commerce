@@ -22,8 +22,8 @@ export async function handleAddToCart(args: unknown, sessionId: string) {
   }
   const product: Product = await productResponse.json();
 
-  // Execute via headless browser
-  const executeResponse = await fetch(
+  // Execute via headless browser with session recovery
+  let executeResponse = await fetch(
     `${HEADLESS_URL}/sessions/${context.headlessSessionId}/execute`,
     {
       method: 'POST',
@@ -40,6 +40,28 @@ export async function handleAddToCart(args: unknown, sessionId: string) {
       }),
     }
   );
+
+  // If session not found (404), try to recreate it once
+  if (executeResponse.status === 404) {
+    await createHeadlessSession(context.headlessSessionId);
+    executeResponse = await fetch(
+      `${HEADLESS_URL}/sessions/${context.headlessSessionId}/execute`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: {
+            type: '[Cart] Add Item',
+            sku: input.sku,
+            quantity: input.quantity,
+          },
+          successTypes: ['[Cart] Add Item Success'],
+          failureTypes: ['[Cart] Add Item Failure'],
+          timeout: 10000,
+        }),
+      }
+    );
+  }
 
   if (!executeResponse.ok) {
     throw new Error(`Headless execution failed: ${executeResponse.status}`);

@@ -67,12 +67,15 @@ Bun.serve({
         return Response.json({ sessionId: body.sessionId, status: 'created' }, { status: 201, headers });
       }
 
-      // Delete session
+      // Delete session (with headless session cleanup)
       const sessionMatch = url.pathname.match(/^\/sessions\/([^/]+)$/);
       if (sessionMatch && method === 'DELETE') {
         const sessionId = sessionMatch[1];
-        sessionStore.delete(sessionId);
-        return Response.json({ sessionId, status: 'deleted' }, { headers });
+        const deleted = await sessionStore.deleteWithCleanup(sessionId);
+        if (deleted) {
+          return Response.json({ sessionId, status: 'deleted' }, { headers });
+        }
+        return Response.json({ sessionId, status: 'not_found' }, { status: 404, headers });
       }
 
       // 404
