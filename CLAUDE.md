@@ -247,3 +247,27 @@ async createSession(id: string) {
 await page.goto(url, { waitUntil: 'networkidle' });
 await page.waitForFunction(() => window.__agentBridge?.isReady());
 ```
+
+### State Propagation Across Services
+- When setting state that affects multiple services, propagate to all:
+  - mcp-tools local sessionStore
+  - headless-session-manager (if session exists)
+  - shop-ui NgRx store (via bridge action dispatch)
+- Trace the full data flow before implementing stateful operations
+- Example: `set_customer_id` must update both mcp-tools sessionStore AND dispatch `[Cart] Set Customer ID` to headless
+
+### Session Recovery
+- Headless sessions may timeout or be destroyed externally (30min idle timeout)
+- Implement retry with session recreation on 404 errors
+- Always propagate dependent state (customerId) when recreating sessions
+
+```typescript
+// Pattern: retry with session recovery
+if (executeResponse.status === 404) {
+  await createHeadlessSession(sessionId);
+  if (context.customerId) {
+    await setCustomerIdInHeadless(sessionId, context.customerId);
+  }
+  // Retry the original operation
+}
+```

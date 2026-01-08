@@ -731,14 +731,16 @@ curl -X POST http://localhost:3001/tools/get_cart/call \
 
 ## Acceptance Criteria
 
-- [ ] All 5 tools are registered and callable
-- [ ] `search_products` returns products from shop-api
-- [ ] `get_product_details` returns single product
-- [ ] `set_customer_id` stores customer in session
-- [ ] `add_to_cart` executes via headless-session-manager
-- [ ] `get_cart` returns cart contents
-- [ ] Session context persists across tool calls
-- [ ] Errors are handled gracefully with clear messages
+- [x] All 5 tools are registered and callable
+- [x] `search_products` returns products from shop-api
+- [x] `get_product_details` returns single product
+- [x] `set_customer_id` stores customer in session (+ propagates to headless)
+- [x] `add_to_cart` executes via headless-session-manager
+- [x] `get_cart` returns cart contents
+- [x] Session context persists across tool calls
+- [x] Errors are handled gracefully with clear messages
+
+**Status:** ✅ Complete (2026-01-08)
 
 ---
 
