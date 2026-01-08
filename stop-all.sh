@@ -13,7 +13,7 @@ NC='\033[0m' # No Color
 
 echo -e "${YELLOW}Stopping Agentic Commerce services...${NC}"
 
-# Function to stop a service
+# Function to stop a service by PID file
 stop_service() {
     local name=$1
     local pid_file="$LOG_DIR/$name.pid"
@@ -23,6 +23,17 @@ stop_service() {
         if kill -0 "$pid" 2>/dev/null; then
             echo "  Stopping $name (PID: $pid)..."
             kill "$pid" 2>/dev/null
+            # Wait up to 5 seconds for graceful shutdown
+            local count=0
+            while kill -0 "$pid" 2>/dev/null && [ $count -lt 50 ]; do
+                sleep 0.1
+                count=$((count + 1))
+            done
+            # Force kill if still running
+            if kill -0 "$pid" 2>/dev/null; then
+                echo "  Force killing $name..."
+                kill -9 "$pid" 2>/dev/null
+            fi
             rm -f "$pid_file"
         else
             echo "  $name not running (stale PID file)"
@@ -31,7 +42,27 @@ stop_service() {
     fi
 }
 
-# Stop services
+# Function to kill processes on a port
+kill_port() {
+    local port=$1
+    local pids=""
+
+    if command -v lsof >/dev/null 2>&1; then
+        pids=$(lsof -ti :$port 2>/dev/null)
+    elif command -v ss >/dev/null 2>&1; then
+        # ss doesn't directly give PIDs, skip
+        return
+    fi
+
+    if [ -n "$pids" ]; then
+        for pid in $pids; do
+            echo "  Killing process on port $port (PID: $pid)..."
+            kill $pid 2>/dev/null
+        done
+    fi
+}
+
+# Stop services by PID file (reverse order of startup)
 stop_service "chat-ui"
 stop_service "mcp-tools"
 stop_service "headless-session-manager"
@@ -40,11 +71,7 @@ stop_service "shop-api"
 
 # Also kill any remaining processes on known ports
 for port in 3000 3001 3002 4200 5173; do
-    pid=$(lsof -ti :$port 2>/dev/null)
-    if [ -n "$pid" ]; then
-        echo "  Killing process on port $port (PID: $pid)..."
-        kill $pid 2>/dev/null
-    fi
+    kill_port $port
 done
 
 echo -e "${GREEN}All services stopped.${NC}"

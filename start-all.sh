@@ -13,6 +13,9 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
+# Track failures
+FAILED=0
+
 # Create log directory
 mkdir -p "$LOG_DIR"
 
@@ -24,10 +27,15 @@ echo ""
 # Function to check if a port is in use
 check_port() {
     local port=$1
-    if lsof -Pi :$port -sTCP:LISTEN -t >/dev/null 2>&1; then
-        return 0  # Port in use
+    if command -v lsof >/dev/null 2>&1; then
+        lsof -Pi :$port -sTCP:LISTEN -t >/dev/null 2>&1
+    elif command -v ss >/dev/null 2>&1; then
+        ss -tuln | grep -q ":$port "
+    elif command -v netstat >/dev/null 2>&1; then
+        netstat -tuln | grep -q ":$port "
     else
-        return 1  # Port available
+        # Can't check, assume available
+        return 1
     fi
 }
 
@@ -52,6 +60,18 @@ wait_for_service() {
     return 1
 }
 
+# Function to check if node_modules exist
+check_deps() {
+    local dir=$1
+    local name=$2
+    if [ ! -d "$SCRIPT_DIR/$dir/node_modules" ] || [ -z "$(ls -A "$SCRIPT_DIR/$dir/node_modules" 2>/dev/null)" ]; then
+        echo -e "  ${RED}Missing dependencies in $name${NC}"
+        echo -e "  Run: cd $dir && npm install (or bun install)"
+        return 1
+    fi
+    return 0
+}
+
 # Function to start a service
 start_service() {
     local name=$1
@@ -69,8 +89,18 @@ start_service() {
 
     cd "$SCRIPT_DIR/$dir"
     $cmd > "$LOG_DIR/$name.log" 2>&1 &
-    echo $! > "$LOG_DIR/$name.pid"
+    local pid=$!
+    echo $pid > "$LOG_DIR/$name.pid"
     cd "$SCRIPT_DIR"
+
+    # Give it a moment to fail fast if there's an issue
+    sleep 0.5
+    if ! kill -0 $pid 2>/dev/null; then
+        echo -e "  ${RED}Failed to start (check $LOG_DIR/$name.log)${NC}"
+        return 1
+    fi
+
+    return 0
 }
 
 # Check prerequisites
@@ -78,36 +108,72 @@ echo -e "${YELLOW}Checking prerequisites...${NC}"
 command -v bun >/dev/null 2>&1 || { echo -e "${RED}bun is required but not installed.${NC}"; exit 1; }
 command -v npm >/dev/null 2>&1 || { echo -e "${RED}npm is required but not installed.${NC}"; exit 1; }
 command -v node >/dev/null 2>&1 || { echo -e "${RED}node is required but not installed.${NC}"; exit 1; }
+command -v curl >/dev/null 2>&1 || { echo -e "${RED}curl is required but not installed.${NC}"; exit 1; }
 echo -e "  ${GREEN}All prerequisites found${NC}"
+echo ""
+
+# Check dependencies
+echo -e "${YELLOW}Checking dependencies...${NC}"
+DEPS_OK=1
+check_deps "shop-ui" "shop-ui" || DEPS_OK=0
+check_deps "headless-session-manager" "headless-session-manager" || DEPS_OK=0
+
+# For Bun apps, check if they can resolve imports (simpler check)
+if [ ! -d "$SCRIPT_DIR/mcp-tools/node_modules/zod" ]; then
+    echo -e "  ${RED}Missing zod in mcp-tools${NC}"
+    echo -e "  Run: cd mcp-tools && npm install zod"
+    DEPS_OK=0
+fi
+
+if [ $DEPS_OK -eq 0 ]; then
+    echo ""
+    echo -e "${RED}Please install missing dependencies and try again.${NC}"
+    exit 1
+fi
+echo -e "  ${GREEN}Dependencies OK${NC}"
 echo ""
 
 # Start services in order
 echo -e "${YELLOW}Starting services...${NC}"
 
 # 1. shop-api (port 3000)
-start_service "shop-api" "shop-api" "bun run dev" 3000
+start_service "shop-api" "shop-api" "bun run dev" 3000 || FAILED=1
 
 # 2. shop-ui (port 4200)
-start_service "shop-ui" "shop-ui" "npm start" 4200
+start_service "shop-ui" "shop-ui" "npm start" 4200 || FAILED=1
 
 # 3. headless-session-manager (port 3002)
-start_service "headless-session-manager" "headless-session-manager" "npm run dev" 3002
+start_service "headless-session-manager" "headless-session-manager" "npm run dev" 3002 || FAILED=1
 
 # 4. mcp-tools (port 3001)
-start_service "mcp-tools" "mcp-tools" "bun run dev" 3001
+start_service "mcp-tools" "mcp-tools" "bun run dev" 3001 || FAILED=1
 
 # 5. chat-ui (port 5173)
-start_service "chat-ui" "chat-ui" "bun run dev" 5173
+start_service "chat-ui" "chat-ui" "bun run dev" 5173 || FAILED=1
+
+if [ $FAILED -eq 1 ]; then
+    echo ""
+    echo -e "${RED}Some services failed to start. Check logs in $LOG_DIR/${NC}"
+    echo "Stopping any services that did start..."
+    "$SCRIPT_DIR/stop-all.sh"
+    exit 1
+fi
 
 echo ""
 echo -e "${YELLOW}Waiting for services to be ready...${NC}"
 
 # Wait for each service to be healthy
-wait_for_service "shop-api" 3000 "http://localhost:3000/health"
-wait_for_service "shop-ui" 4200 "http://localhost:4200"
-wait_for_service "headless-session-manager" 3002 "http://localhost:3002/health"
-wait_for_service "mcp-tools" 3001 "http://localhost:3001/health"
-wait_for_service "chat-ui" 5173 "http://localhost:5173"
+wait_for_service "shop-api" 3000 "http://localhost:3000/health" || FAILED=1
+wait_for_service "shop-ui" 4200 "http://localhost:4200" || FAILED=1
+wait_for_service "headless-session-manager" 3002 "http://localhost:3002/health" || FAILED=1
+wait_for_service "mcp-tools" 3001 "http://localhost:3001/health" || FAILED=1
+wait_for_service "chat-ui" 5173 "http://localhost:5173" || FAILED=1
+
+if [ $FAILED -eq 1 ]; then
+    echo ""
+    echo -e "${RED}Some services failed health checks. Check logs in $LOG_DIR/${NC}"
+    exit 1
+fi
 
 echo ""
 echo -e "${GREEN}========================================${NC}"
